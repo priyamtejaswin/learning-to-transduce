@@ -18,9 +18,9 @@ def generate_data(length, size):
     for i in xrange(size):
         row = np.zeros(length)
         n_ones = np.random.randint(low=0, high=length+1)
-        n_indices = np.random.random_integers(low=0, high=length, size=n_ones)
+        n_indices = np.random.random_integers(low=0, high=length-1, size=n_ones)
+        row[n_indices] = 1
 
-        row[n_ones] = 1
         data.append(row)
         target.append(np.sum(row))
 
@@ -32,7 +32,7 @@ def generate_data(length, size):
 def main():
     T = 10
     SIZE = 50
-    data, target generate_data(length=T, size=SIZE)
+    data, target = generate_data(length=T, size=SIZE)
 
     for _d, _t in izip(data, target):
         print _d, _t
