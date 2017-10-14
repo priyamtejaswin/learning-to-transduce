@@ -44,6 +44,17 @@ def relu(x):
     return np.max((0, x))
 
 
+def deriv_relu(x):
+    """
+    Derivative function for ReLU.
+    """
+
+    if x>0:
+        return 1
+    else:
+        return 0
+
+
 def forward_pass((Wi, Wh, Wo), x):
     """
     Run single instance of a forward pass.
@@ -51,7 +62,7 @@ def forward_pass((Wi, Wh, Wo), x):
     Outputs: S_input, S_activation, y
     """
 
-    aS = np.zeros(x.shape[0])
+    aS = np.zeros(x.shape[0] + 1)
     bS = np.zeros_like(aS)
 
     for t in range(x.shape[0]):
@@ -61,6 +72,43 @@ def forward_pass((Wi, Wh, Wo), x):
     y = Wo * bS[t]
 
     return aS, bS, y
+
+
+def rsme_loss(y, z):
+    """
+    Returns rmse error.
+    Inputs: output, target
+    Outputs: rmse
+    """
+
+    return 0.5 * np.square(y-z)
+
+
+def backward_pass((Wi, Wh, Wo), aS, bS, x, y, z):
+    """
+    Returns updates for weights.
+    Inputs: (weights), aS, bS, input, output, target
+    Returns: del_Wi, del_Wh, del_Wo
+    """
+    LENGTH = x.shape[0]
+
+    del_h = np.zeros(aS.shape[0]) # delta for hidden units
+
+    del_Wi, del_Wh, del_Wo = 0, 0, 0
+
+    for t in range(LENGTH)[::-1]:
+        if t==LENGTH-1:
+            del_h[t] = deriv_relu(aS[t]) * ((y - z)*Wo + del_h[t+1]*Wh)
+        else:
+            del_h[t] = deriv_relu(aS[t]) * del_h[t+1]*Wh
+
+    # (y - z) == d_Loss/d_aOutputUnit
+    del_Wo = (y - z) * bS[LENGTH-1] # del_O x bS[t_LAST]
+    for t in range(LENGTH):
+        del_Wh += del_h[t] * bS[t]
+        del_Wi += del_h[t] * x[t]
+
+    return del_Wi, del_Wh, del_Wo
 
 
 def main():
@@ -77,9 +125,14 @@ def main():
     Wh = np.random.rand() * SCALE
     Wo = np.random.rand() * SCALE
 
-    for _d, _t in izip(data, target):
-        aS, bS, y = forward_pass((Wi, Wh, Wo), _d)
-        print bS, _t, y
+    # for _d, _t in izip(data, target):
+    #     aS, bS, y = forward_pass((Wi, Wh, Wo), _d)
+    #     print bS, _t, y
+
+    x, z = np.array([1, 1, 1, 1, 1]), 5
+
+    aS, bS, y = forward_pass((Wi, Wh, Wo), x)
+    print backward_pass((Wi, Wh, Wo), aS, bS, x, y, z)
 
     return
 
