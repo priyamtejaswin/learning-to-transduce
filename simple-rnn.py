@@ -111,6 +111,36 @@ def backward_pass((Wi, Wh, Wo), aS, bS, x, y, z):
     return del_Wi, del_Wh, del_Wo
 
 
+def gradient_check():
+    """
+    Do a numerical gradient check for the entire model.
+    """
+
+    SMALL_VAL = 0.5 * 1e-5
+    SCALE = 0.1
+    Wi = np.random.rand() * SCALE
+    Wh = np.random.rand() * SCALE
+    Wo = np.random.rand() * SCALE
+
+    x, z = np.array([1, 1, 1, 1, 1]), 5
+
+    aS, bS, y = forward_pass((Wi, Wh, Wo), x)
+    del_Wi, del_Wh, del_Wo = backward_pass((Wi, Wh, Wo), aS, bS, x, y, z)
+
+    params = np.array([Wi, Wh, Wo])
+    grads = np.array([del_Wi, del_Wh, del_Wo])
+
+    for param, grad in izip(np.nditer(params, op_flags=["readwrite"]), grads):
+        ipdb.set_trace()
+        param += SMALL_VAL
+        _, _, upper = forward_pass((params[0], params[1], params[2]), x)
+        param -= 2*SMALL_VAL
+        _, _, lower = forward_pass((params[0], params[1], params[2]), x)
+        param += SMALL_VAL
+
+        print grad, (upper - lower)/(2*SMALL_VAL)
+
+
 def main():
     """
     Main code for the program.
@@ -133,6 +163,8 @@ def main():
 
     aS, bS, y = forward_pass((Wi, Wh, Wo), x)
     print backward_pass((Wi, Wh, Wo), aS, bS, x, y, z)
+
+    # gradient_check()
 
     return
 
