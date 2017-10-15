@@ -143,7 +143,7 @@ def gradient_check():
 
 def main():
     """
-    Main code for the program.
+    Main code.
     """
 
     LENGTH = 10
