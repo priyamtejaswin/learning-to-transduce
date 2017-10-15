@@ -62,14 +62,16 @@ def forward_pass((Wi, Wh, Wo), x):
     Outputs: S_input, S_activation, y
     """
 
+    # ipdb.set_trace()
+
     aS = np.zeros(x.shape[0] + 1)
     bS = np.zeros_like(aS)
 
     for t in range(x.shape[0]):
-        aS[t] = (Wi * x[t]) + (Wh * bS[t-1]) # right now everything is one number
+        aS[t] = (x[t] * Wi) + (bS[t-1] * Wh) # right now everything is one number
         bS[t] = relu(aS[t])
 
-    y = Wo * bS[t]
+    y = bS[t] * Wo
 
     return aS, bS, y
 
@@ -81,10 +83,10 @@ def rsme_loss(y, z):
     Outputs: rmse
     """
 
-    return 0.5 * np.square(y-z)
+    return 0.5 * np.square(z - y)
 
 
-def backward_pass((Wi, Wh, Wo), aS, bS, x, y, z):
+def backward_pass((Wi, Wh, Wo), x, z, aS, bS, y):
     """
     Returns updates for weights.
     Inputs: (weights), aS, bS, input, output, target
@@ -92,23 +94,9 @@ def backward_pass((Wi, Wh, Wo), aS, bS, x, y, z):
     """
     LENGTH = x.shape[0]
 
-    del_h = np.zeros(aS.shape[0]) # delta for hidden units
+    del_Wo = (y - z) * bS[LENGTH-1]
 
-    del_Wi, del_Wh, del_Wo = 0, 0, 0
-
-    for t in range(LENGTH)[::-1]:
-        if t==LENGTH-1:
-            del_h[t] = deriv_relu(aS[t]) * ((y - z)*Wo + del_h[t+1]*Wh)
-        else:
-            del_h[t] = deriv_relu(aS[t]) * del_h[t+1]*Wh
-
-    # (y - z) == d_Loss/d_aOutputUnit
-    del_Wo = (y - z) * bS[LENGTH-1] # del_O x bS[t_LAST]
-    for t in range(LENGTH):
-        del_Wh += del_h[t] * bS[t]
-        del_Wi += del_h[t] * x[t]
-
-    return del_Wi, del_Wh, del_Wo
+    return del_Wo
 
 
 def gradient_check():
@@ -116,7 +104,7 @@ def gradient_check():
     Do a numerical gradient check for the entire model.
     """
 
-    SMALL_VAL = 0.5 * 1e-5
+    SMALL_VAL = 1e-5
     SCALE = 0.1
     Wi = np.random.rand() * SCALE
     Wh = np.random.rand() * SCALE
@@ -125,20 +113,18 @@ def gradient_check():
     x, z = np.array([1, 1, 1, 1, 1]), 5
 
     aS, bS, y = forward_pass((Wi, Wh, Wo), x)
-    del_Wi, del_Wh, del_Wo = backward_pass((Wi, Wh, Wo), aS, bS, x, y, z)
+    del_Wo = backward_pass((Wi, Wh, Wo), x, z, aS, bS, y)
 
-    params = np.array([Wi, Wh, Wo])
-    grads = np.array([del_Wi, del_Wh, del_Wo])
+    _, _, upper = forward_pass((Wi, Wh, Wo+SMALL_VAL), x)
+    lupper = rsme_loss(upper, z)
+    _, _, lower = forward_pass((Wi, Wh, Wo-SMALL_VAL), x)
+    llower = rsme_loss(lower, z)
 
-    for param, grad in izip(np.nditer(params, op_flags=["readwrite"]), grads):
-        ipdb.set_trace()
-        param += SMALL_VAL
-        _, _, upper = forward_pass((params[0], params[1], params[2]), x)
-        param -= 2*SMALL_VAL
-        _, _, lower = forward_pass((params[0], params[1], params[2]), x)
-        param += SMALL_VAL
+    num_grad = (lupper - llower)/(2*SMALL_VAL)
+    assert np.allclose(del_Wo, num_grad, rtol=1e-3), \
+        "Mismatch numerical: %f, analytical: %f"%(num_grad, del_Wo)
 
-        print grad, (upper - lower)/(2*SMALL_VAL)
+    print "PASSED"
 
 
 def main():
@@ -146,27 +132,7 @@ def main():
     Main code.
     """
 
-    LENGTH = 10
-    SIZE = 25
-    data, target = generate_data(length=LENGTH, size=SIZE)
-
-    SCALE = 0.1
-    Wi = np.random.rand() * SCALE
-    Wh = np.random.rand() * SCALE
-    Wo = np.random.rand() * SCALE
-
-    # for _d, _t in izip(data, target):
-    #     aS, bS, y = forward_pass((Wi, Wh, Wo), _d)
-    #     print bS, _t, y
-
-    x, z = np.array([1, 1, 1, 1, 1]), 5
-
-    aS, bS, y = forward_pass((Wi, Wh, Wo), x)
-    print backward_pass((Wi, Wh, Wo), aS, bS, x, y, z)
-
-    # gradient_check()
-
-    return
+    gradient_check()
 
 
 if __name__ == '__main__':
