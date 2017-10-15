@@ -94,15 +94,26 @@ def backward_pass((Wi, Wh, Wo), x, z, aS, bS, y):
     """
     LENGTH = x.shape[0]
 
+    del_Wh = 0
     del_Wo = (y - z) * bS[LENGTH-1]
 
-    return del_Wo
+    hidden_factor = 1
+    hidden_constant = (y - z) * Wo
+
+    for t in range(LENGTH)[::-1]:
+        time_derivative = deriv_relu(aS[t]) * bS[t-1]
+        del_Wh += hidden_constant * hidden_factor * time_derivative
+        hidden_factor *= deriv_relu(aS[t]) * Wh
+
+    return del_Wo, del_Wh
 
 
 def gradient_check():
     """
     Do a numerical gradient check for the entire model.
     """
+
+    print "Running numerical gradient check..."
 
     SMALL_VAL = 1e-5
     SCALE = 0.1
@@ -113,16 +124,27 @@ def gradient_check():
     x, z = np.array([1, 1, 1, 1, 1]), 5
 
     aS, bS, y = forward_pass((Wi, Wh, Wo), x)
-    del_Wo = backward_pass((Wi, Wh, Wo), x, z, aS, bS, y)
+    del_Wo, del_Wh = backward_pass((Wi, Wh, Wo), x, z, aS, bS, y)
 
+    ## del_Wo
     _, _, upper = forward_pass((Wi, Wh, Wo+SMALL_VAL), x)
     lupper = rsme_loss(upper, z)
     _, _, lower = forward_pass((Wi, Wh, Wo-SMALL_VAL), x)
     llower = rsme_loss(lower, z)
 
     num_grad = (lupper - llower)/(2*SMALL_VAL)
-    assert np.allclose(del_Wo, num_grad, rtol=1e-3), \
+    assert np.allclose(del_Wo, num_grad, rtol=1e-4), \
         "Mismatch numerical: %f, analytical: %f"%(num_grad, del_Wo)
+
+    ## del_Wh
+    _, _, upper = forward_pass((Wi, Wh+SMALL_VAL, Wo), x)
+    lupper = rsme_loss(upper, z)
+    _, _, lower = forward_pass((Wi, Wh-SMALL_VAL, Wo), x)
+    llower = rsme_loss(lower, z)
+
+    num_grad = (lupper - llower)/(2*SMALL_VAL)
+    assert np.allclose(del_Wh, num_grad, rtol=1e-4), \
+        "Mismatch numerical: %f, analytical: %f"%(num_grad, del_Wh)
 
     print "PASSED"
 
