@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-## catch22 - a simple rnn in numpy
+## A simple rnn in numpy - the REAL catch22.
 
 import numpy as np
 import sys
@@ -30,7 +30,7 @@ def generate_data(length, size):
         data.append(row)
         target.append(np.sum(row))
 
-    assert len(data)==len(target), "-- data, target lengths mis-match --"
+    assert len(data) == len(target), "-- data, target lengths mis-match --"
     return np.array(data), np.array(target)
 
 
@@ -147,7 +147,7 @@ def gradient_check():
 
     num_grad = (lupper - llower)/(2*SMALL_VAL)
     assert np.allclose(del_Wo, num_grad, rtol=1e-4), \
-        "Mismatch numerical: %f, analytical: %f"%(num_grad, del_Wo)
+        "-- Mismatch numerical: %f, analytical: % --f"%(num_grad, del_Wo)
 
     ## del_Wh
     _, _, upper = forward_pass((Wi, Wh+SMALL_VAL, Wo), x)
@@ -157,7 +157,7 @@ def gradient_check():
 
     num_grad = (lupper - llower)/(2*SMALL_VAL)
     assert np.allclose(del_Wh, num_grad, rtol=1e-4), \
-        "Mismatch numerical: %f, analytical: %f"%(num_grad, del_Wh)
+        "-- Mismatch numerical: %f, analytical: %f --"%(num_grad, del_Wh)
 
     ## del_Wi
     _, _, upper = forward_pass((Wi+SMALL_VAL, Wh, Wo), x)
@@ -167,9 +167,10 @@ def gradient_check():
 
     num_grad = (lupper - llower)/(2*SMALL_VAL)
     assert np.allclose(del_Wi, num_grad, rtol=1e-4), \
-        "Mismatch numerical: %f, analytical: %f"%(num_grad, del_Wi)
+        "-- Mismatch numerical: %f, analytical: %f --"%(num_grad, del_Wi)
 
     print "PASSED"
+    return
 
 
 def main():
@@ -178,6 +179,56 @@ def main():
     """
 
     gradient_check()
+
+    LENGTH, SAMPLES = 10, 1000
+    TEST_SAMPLES = 100
+    EPOCHS = 5
+    SCALE = 0.1
+    ALPHA = 0.001
+
+    ## parameters
+    Wi = np.random.rand() * SCALE
+    Wh = np.random.rand() * SCALE
+    Wo = np.random.rand() * SCALE
+
+    ## training data
+    data, target = generate_data(length=LENGTH, size=SAMPLES)
+    ## testing data
+    test_data, test_target = generate_data(length=LENGTH, size=TEST_SAMPLES)
+
+    log = "Epoch %d. train_loss: %.2f, train_acc: %.2f, test_loss: %.2f, test_acc: %.2f"
+
+    print "\nStart training.\n"
+    for _ep in xrange(EPOCHS):
+        test_acc, test_loss = [], []
+        train_acc, train_loss = [], []
+
+        for _ix in xrange(SAMPLES):
+            x, z = data[_ix], target[_ix]
+            aS, bS, y = forward_pass((Wi, Wh, Wo), x)
+            loss = rsme_loss(y, z)
+            del_Wi, del_Wh, del_Wo = backward_pass((Wi, Wh, Wo), data[_ix], z, aS, bS, y)
+
+            Wi -= ALPHA * del_Wi
+            Wh -= ALPHA * del_Wh
+            Wo -= ALPHA * del_Wo
+
+            train_acc.append(np.round(y)==z)
+            train_loss.append(loss)
+
+        for _ix in xrange(TEST_SAMPLES):
+            x, z = data[_ix], target[_ix]
+            aS, bS, y = forward_pass((Wi, Wh, Wo), x)
+            loss = rsme_loss(y, z)
+
+            test_acc.append(np.round(y)==z)
+            test_loss.append(loss)
+
+        print log%(_ep+1, np.mean(train_loss), np.mean(train_acc),
+                    np.mean(test_loss), np.mean(test_acc))
+
+    print "\nComplete.\n"
+    return
 
 
 if __name__ == '__main__':
