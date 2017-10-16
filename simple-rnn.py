@@ -207,7 +207,8 @@ def main():
             x, z = data[_ix], target[_ix]
             aS, bS, y = forward_pass((Wi, Wh, Wo), x)
             loss = rsme_loss(y, z)
-            del_Wi, del_Wh, del_Wo = backward_pass((Wi, Wh, Wo), data[_ix], z, aS, bS, y)
+
+            del_Wi, del_Wh, del_Wo = backward_pass((Wi, Wh, Wo), x, z, aS, bS, y)
 
             Wi -= ALPHA * del_Wi
             Wh -= ALPHA * del_Wh
