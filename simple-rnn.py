@@ -94,18 +94,31 @@ def backward_pass((Wi, Wh, Wo), x, z, aS, bS, y):
     """
     LENGTH = x.shape[0]
 
+    del_Wi = 0
     del_Wh = 0
+    ## del_Wo only has one term since
+    ## Wo is only dependent on one activation.
     del_Wo = (y - z) * bS[LENGTH-1]
 
     hidden_factor = 1
     hidden_constant = (y - z) * Wo
 
-    for t in range(LENGTH)[::-1]:
-        time_derivative = deriv_relu(aS[t]) * bS[t-1]
-        del_Wh += hidden_constant * hidden_factor * time_derivative
-        hidden_factor *= deriv_relu(aS[t]) * Wh
+    input_factor = 1
+    input_constant = (y - z) * Wo
 
-    return del_Wo, del_Wh
+    ## del_Wh, del_Wi require only 1 loop because
+    ## the next layer has only one activation
+    ## which occurs at the final timestep.
+    for t in range(LENGTH)[::-1]:
+        hidden_time_derivative = deriv_relu(aS[t]) * bS[t-1]
+        del_Wh += hidden_constant * hidden_factor * hidden_time_derivative
+        hidden_factor *= deriv_relu(aS[t]) * Wh ## dS(t)/dS(t-1)
+
+        input_time_derivative = deriv_relu(aS[t]) * x[t]
+        del_Wi += input_constant * input_factor * input_time_derivative
+        input_factor *= deriv_relu(aS[t]) * Wh ## dS(t)/dS(t-1)
+
+    return del_Wo, del_Wh, del_Wi
 
 
 def gradient_check():
@@ -124,7 +137,7 @@ def gradient_check():
     x, z = np.array([1, 1, 1, 1, 1]), 5
 
     aS, bS, y = forward_pass((Wi, Wh, Wo), x)
-    del_Wo, del_Wh = backward_pass((Wi, Wh, Wo), x, z, aS, bS, y)
+    del_Wo, del_Wh, del_Wi = backward_pass((Wi, Wh, Wo), x, z, aS, bS, y)
 
     ## del_Wo
     _, _, upper = forward_pass((Wi, Wh, Wo+SMALL_VAL), x)
@@ -145,6 +158,16 @@ def gradient_check():
     num_grad = (lupper - llower)/(2*SMALL_VAL)
     assert np.allclose(del_Wh, num_grad, rtol=1e-4), \
         "Mismatch numerical: %f, analytical: %f"%(num_grad, del_Wh)
+
+    ## del_Wi
+    _, _, upper = forward_pass((Wi+SMALL_VAL, Wh, Wo), x)
+    lupper = rsme_loss(upper, z)
+    _, _, lower = forward_pass((Wi-SMALL_VAL, Wh, Wo), x)
+    llower = rsme_loss(lower, z)
+
+    num_grad = (lupper - llower)/(2*SMALL_VAL)
+    assert np.allclose(del_Wi, num_grad, rtol=1e-4), \
+        "Mismatch numerical: %f, analytical: %f"%(num_grad, del_Wi)
 
     print "PASSED"
 
