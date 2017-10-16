@@ -98,13 +98,14 @@ def backward_pass((Wi, Wh, Wo), x, z, aS, bS, y):
     del_Wh = 0
     ## del_Wo only has one term since
     ## Wo is only dependent on one activation.
-    del_Wo = (y - z) * bS[LENGTH-1]
+    del_output = y - z
+    del_Wo = del_output * bS[LENGTH-1]
 
     hidden_factor = 1
-    hidden_constant = (y - z) * Wo
+    hidden_constant = del_output * Wo
 
     input_factor = 1
-    input_constant = (y - z) * Wo
+    input_constant = del_output * Wo
 
     ## del_Wh, del_Wi require only 1 loop because
     ## the next layer has only one activation
