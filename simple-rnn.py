@@ -83,7 +83,7 @@ def mse_loss(y, z):
 
     assert y.shape == z.shape, "-- y, z shape mis-match --"
     assert len(y.shape) == 1, "-- y shape is incorrect --"
-    return 0.5 * np.sum(np.square(z - y), axis=0)/y.shape[0]
+    return 0.5 * np.mean(np.square(z - y), axis=0)
 
 
 def backward_pass((Wi, Wh, Wo), x, z, aS, bS, y):
@@ -124,8 +124,7 @@ def backward_pass((Wi, Wh, Wo), x, z, aS, bS, y):
         del_Wi += input_constant * input_factor * input_time_derivative
         input_factor *= deriv_relu(aS[:, t]) * Wh ## dS(t)/dS(t-1)
 
-    return np.sum(del_Wo, axis=0)/BSIZE , np.sum(del_Wh, axis=0)/BSIZE, \
-            np.sum(del_Wi, axis=0)/BSIZE
+    return np.mean(del_Wo, axis=0) , np.mean(del_Wh, axis=0), np.mean(del_Wi, axis=0)
 
 
 def gradient_check():
@@ -245,7 +244,7 @@ def main():
 
 if __name__ == '__main__':
     gradient_check()
-    
+
     # x = np.array([
     # [1, 1, 1, 1, 1],
     # [0, 0, 0, 0, 0]
