@@ -7,7 +7,7 @@ import sys
 import ipdb
 from itertools import izip
 
-RANDOM_SEED = 1234
+RANDOM_SEED = 12
 np.random.seed(RANDOM_SEED)
 
 
@@ -141,10 +141,10 @@ def gradient_check():
     Wo = np.random.rand() * SCALE
 
     x = np.array([
-    [1, 1, 1, 1, 1],
+    [1, 0, 1, 0, 1],
     [1, 1, 1, 1, 0]
     ])
-    z = np.array([5, 4])
+    z = np.array([3, 4])
 
     aS, bS, y = forward_pass((Wi, Wh, Wo), x)
     del_Wo, del_Wh, del_Wi = backward_pass((Wi, Wh, Wo), x, z, aS, bS, y)
@@ -188,11 +188,11 @@ def main():
     Main code.
     """
 
-    LENGTH, SAMPLES = 10, 1000
+    LENGTH, SAMPLES, BSIZE = 10, 1000, 100
     TEST_SAMPLES = 100
-    EPOCHS = 5
+    EPOCHS = 10
     SCALE = 0.1
-    ALPHA = 0.001
+    ALPHA = 0.01
 
     ## parameters
     Wi = np.random.rand() * SCALE
@@ -211,8 +211,14 @@ def main():
         test_acc, test_loss = [], []
         train_acc, train_loss = [], []
 
-        for _ix in xrange(SAMPLES):
-            x, z = np.atleast_2d(data[_ix]), np.array([target[_ix]])
+        _limit = SAMPLES//BSIZE
+        if SAMPLES%BSIZE != 0:
+            _limit += 1
+
+        for _ix in xrange(_limit):
+            # x, z = np.atleast_2d(data[_ix]), np.array([target[_ix]])
+            x = np.atleast_2d(data[_ix*BSIZE : (_ix+1)*BSIZE])
+            z = np.atleast_1d(target[_ix*BSIZE : (_ix+1)*BSIZE])
             aS, bS, y = forward_pass((Wi, Wh, Wo), x)
             loss = mse_loss(y, z)
 
@@ -222,19 +228,17 @@ def main():
             Wh -= ALPHA * del_Wh
             Wo -= ALPHA * del_Wo
 
-            train_acc.append(np.round(y)==z)
+            train_acc.append(np.mean(np.round(y)==z))
             train_loss.append(loss)
 
-        for _ix in xrange(TEST_SAMPLES):
-            x, z = np.atleast_2d(data[_ix]), np.array([target[_ix]])
-            aS, bS, y = forward_pass((Wi, Wh, Wo), x)
-            loss = mse_loss(y, z)
 
-            test_acc.append(np.round(y)==z)
-            test_loss.append(loss)
+        aS, bS, y = forward_pass((Wi, Wh, Wo), np.atleast_2d(test_data))
+        loss = mse_loss(y, np.atleast_1d(test_target))
 
-        print log%(_ep+1, np.mean(train_loss), np.mean(train_acc),
-                    np.mean(test_loss), np.mean(test_acc))
+        test_acc = np.mean(np.round(y)==np.atleast_1d(test_target))
+        test_loss = loss
+
+        print log%(_ep+1, np.mean(train_loss), np.mean(train_acc), test_loss, test_acc)
 
     print "\nComplete.\n"
     print "Trained parameters:\nWi %f\nWh %f\nWo %f\n"%(Wi, Wh, Wo)
@@ -243,7 +247,7 @@ def main():
 
 if __name__ == '__main__':
     gradient_check()
-    main()
+    # main()
 
     # x = np.array([
     # [1, 1, 1, 1, 1],
