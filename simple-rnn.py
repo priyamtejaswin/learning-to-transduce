@@ -93,7 +93,6 @@ def backward_pass((Wi, Wh, Wo), x, z, aS, bS, y):
     Returns: del_Wi, del_Wh, del_Wo
     """
 
-    ipdb.set_trace()
     LENGTH = x.shape[1] # LENGTH of sequence
     BSIZE = x.shape[0]
 
@@ -125,7 +124,8 @@ def backward_pass((Wi, Wh, Wo), x, z, aS, bS, y):
         del_Wi += input_constant * input_factor * input_time_derivative
         input_factor *= deriv_relu(aS[:, t]) * Wh ## dS(t)/dS(t-1)
 
-    return del_Wo, del_Wh, del_Wi
+    return np.sum(del_Wo, axis=0)/BSIZE , np.sum(del_Wh, axis=0)/BSIZE, \
+            np.sum(del_Wi, axis=0)/BSIZE
 
 
 def gradient_check():
@@ -240,17 +240,18 @@ def main():
 
 
 if __name__ == '__main__':
-    # main()
-    x = np.array([
-    [1, 1, 1, 1, 1],
-    [0, 0, 0, 0, 0]
-    ])
-    z = np.array([5, 0])
-
-    SCALE = 0.1
-    Wi = np.random.rand() * SCALE
-    Wh = np.random.rand() * SCALE
-    Wo = np.random.rand() * SCALE
-
-    aS, bS, y = forward_pass((Wi, Wh, Wo), x)
-    print backward_pass((Wi, Wh, Wo), x, z, aS, bS, y)
+    main()
+    return
+    # x = np.array([
+    # [1, 1, 1, 1, 1],
+    # [0, 0, 0, 0, 0]
+    # ])
+    # z = np.array([5, 0])
+    #
+    # SCALE = 0.1
+    # Wi = np.random.rand() * SCALE
+    # Wh = np.random.rand() * SCALE
+    # Wo = np.random.rand() * SCALE
+    #
+    # aS, bS, y = forward_pass((Wi, Wh, Wo), x)
+    # print backward_pass((Wi, Wh, Wo), x, z, aS, bS, y)
