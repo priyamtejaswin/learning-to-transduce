@@ -141,7 +141,11 @@ def gradient_check():
     Wh = np.random.rand() * SCALE
     Wo = np.random.rand() * SCALE
 
-    x, z = np.array([1, 1, 1, 1, 1]), 5
+    x = np.array([
+    [1, 1, 1, 1, 1],
+    [1, 1, 1, 1, 0]
+    ])
+    z = np.array([5, 4])
 
     aS, bS, y = forward_pass((Wi, Wh, Wo), x)
     del_Wo, del_Wh, del_Wi = backward_pass((Wi, Wh, Wo), x, z, aS, bS, y)
@@ -240,8 +244,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
-    return
+    gradient_check()
+    
     # x = np.array([
     # [1, 1, 1, 1, 1],
     # [0, 0, 0, 0, 0]
