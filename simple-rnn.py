@@ -41,7 +41,7 @@ def relu(x):
     Outputs: ReLU'd number
     """
 
-    return np.max((0, x))
+    return np.maximum(0, x)
 
 
 def deriv_relu(x):
@@ -49,10 +49,9 @@ def deriv_relu(x):
     Derivative function for ReLU.
     """
 
-    if x>0:
-        return 1
-    else:
-        return 0
+    g = np.zeros_like(x)
+    g[x>0] = 1
+    return g
 
 
 def forward_pass((Wi, Wh, Wo), x):
@@ -78,12 +77,14 @@ def forward_pass((Wi, Wh, Wo), x):
 
 def rsme_loss(y, z):
     """
-    Returns rmse error.
+    Returns mean rmse error.
     Inputs: output, target
     Outputs: rmse
     """
 
-    return 0.5 * np.square(z - y)
+    assert y.shape==z.shape, "-- y, z shape mis-match --"
+    assert len(y.shape)==1, "-- y shape is incorrect --"
+    return 0.5 * np.sum(np.square(z - y), axis=0)/y.shape[0]
 
 
 def backward_pass((Wi, Wh, Wo), x, z, aS, bS, y):
