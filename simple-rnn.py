@@ -61,46 +61,51 @@ def forward_pass((Wi, Wh, Wo), x):
     Outputs: S_input, S_activation, y
     """
 
-    # ipdb.set_trace()
-
-    aS = np.zeros(x.shape[0] + 1)
+    LENGTH = x.shape[1] # LENGTH of sequence
+    aS = np.zeros((x.shape[0], LENGTH+1)) # BSIZE, LENGTH+1
     bS = np.zeros_like(aS)
 
-    for t in range(x.shape[0]):
-        aS[t] = (x[t] * Wi) + (bS[t-1] * Wh) # right now everything is one number
-        bS[t] = relu(aS[t])
+    for t in range(LENGTH):
+        aS[:, t] = (x[:, t] * Wi) + (bS[:, t-1] * Wh) # right now everything is one number
+        bS[:, t] = relu(aS[:, t])
 
-    y = bS[t] * Wo
+    y = bS[:, t] * Wo
 
     return aS, bS, y
 
 
-def rsme_loss(y, z):
+def mse_loss(y, z):
     """
-    Returns mean rmse error.
+    Returns mse error.
     Inputs: output, target
-    Outputs: rmse
+    Outputs: mse
     """
 
-    assert y.shape==z.shape, "-- y, z shape mis-match --"
-    assert len(y.shape)==1, "-- y shape is incorrect --"
+    assert y.shape == z.shape, "-- y, z shape mis-match --"
+    assert len(y.shape) == 1, "-- y shape is incorrect --"
     return 0.5 * np.sum(np.square(z - y), axis=0)/y.shape[0]
 
 
 def backward_pass((Wi, Wh, Wo), x, z, aS, bS, y):
     """
     Returns updates for weights.
-    Inputs: (weights), aS, bS, input, output, target
+    Inputs: (weights), input, target, aS, bS, output
     Returns: del_Wi, del_Wh, del_Wo
     """
-    LENGTH = x.shape[0]
+
+    ipdb.set_trace()
+    LENGTH = x.shape[1] # LENGTH of sequence
+    BSIZE = x.shape[0]
 
     del_Wi = 0
     del_Wh = 0
+
     ## del_Wo only has one term since
     ## Wo is only dependent on one activation.
+    assert y.shape == z.shape, "-- y, z shape mis-match --"
+    assert len(y.shape) == 1, "-- y shape incorrect --"
     del_output = y - z
-    del_Wo = del_output * bS[LENGTH-1]
+    del_Wo = del_output * bS[:, LENGTH-1]
 
     hidden_factor = 1
     hidden_constant = del_output * Wo
@@ -112,13 +117,13 @@ def backward_pass((Wi, Wh, Wo), x, z, aS, bS, y):
     ## the next layer has only one activation
     ## which occurs at the final timestep.
     for t in range(LENGTH)[::-1]:
-        hidden_time_derivative = deriv_relu(aS[t]) * bS[t-1]
+        hidden_time_derivative = deriv_relu(aS[:, t]) * bS[:, t-1]
         del_Wh += hidden_constant * hidden_factor * hidden_time_derivative
-        hidden_factor *= deriv_relu(aS[t]) * Wh ## dS(t)/dS(t-1)
+        hidden_factor *= deriv_relu(aS[:, t]) * Wh ## dS(t)/dS(t-1)
 
-        input_time_derivative = deriv_relu(aS[t]) * x[t]
+        input_time_derivative = deriv_relu(aS[:, t]) * x[:, t]
         del_Wi += input_constant * input_factor * input_time_derivative
-        input_factor *= deriv_relu(aS[t]) * Wh ## dS(t)/dS(t-1)
+        input_factor *= deriv_relu(aS[:, t]) * Wh ## dS(t)/dS(t-1)
 
     return del_Wo, del_Wh, del_Wi
 
@@ -143,9 +148,9 @@ def gradient_check():
 
     ## del_Wo
     _, _, upper = forward_pass((Wi, Wh, Wo+SMALL_VAL), x)
-    lupper = rsme_loss(upper, z)
+    lupper = mse_loss(upper, z)
     _, _, lower = forward_pass((Wi, Wh, Wo-SMALL_VAL), x)
-    llower = rsme_loss(lower, z)
+    llower = mse_loss(lower, z)
 
     num_grad = (lupper - llower)/(2*SMALL_VAL)
     assert np.allclose(del_Wo, num_grad, rtol=1e-4), \
@@ -153,9 +158,9 @@ def gradient_check():
 
     ## del_Wh
     _, _, upper = forward_pass((Wi, Wh+SMALL_VAL, Wo), x)
-    lupper = rsme_loss(upper, z)
+    lupper = mse_loss(upper, z)
     _, _, lower = forward_pass((Wi, Wh-SMALL_VAL, Wo), x)
-    llower = rsme_loss(lower, z)
+    llower = mse_loss(lower, z)
 
     num_grad = (lupper - llower)/(2*SMALL_VAL)
     assert np.allclose(del_Wh, num_grad, rtol=1e-4), \
@@ -163,9 +168,9 @@ def gradient_check():
 
     ## del_Wi
     _, _, upper = forward_pass((Wi+SMALL_VAL, Wh, Wo), x)
-    lupper = rsme_loss(upper, z)
+    lupper = mse_loss(upper, z)
     _, _, lower = forward_pass((Wi-SMALL_VAL, Wh, Wo), x)
-    llower = rsme_loss(lower, z)
+    llower = mse_loss(lower, z)
 
     num_grad = (lupper - llower)/(2*SMALL_VAL)
     assert np.allclose(del_Wi, num_grad, rtol=1e-4), \
@@ -208,7 +213,7 @@ def main():
         for _ix in xrange(SAMPLES):
             x, z = data[_ix], target[_ix]
             aS, bS, y = forward_pass((Wi, Wh, Wo), x)
-            loss = rsme_loss(y, z)
+            loss = mse_loss(y, z)
 
             del_Wi, del_Wh, del_Wo = backward_pass((Wi, Wh, Wo), x, z, aS, bS, y)
 
@@ -222,7 +227,7 @@ def main():
         for _ix in xrange(TEST_SAMPLES):
             x, z = data[_ix], target[_ix]
             aS, bS, y = forward_pass((Wi, Wh, Wo), x)
-            loss = rsme_loss(y, z)
+            loss = mse_loss(y, z)
 
             test_acc.append(np.round(y)==z)
             test_loss.append(loss)
@@ -235,4 +240,17 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    # main()
+    x = np.array([
+    [1, 1, 1, 1, 1],
+    [0, 0, 0, 0, 0]
+    ])
+    z = np.array([5, 0])
+
+    SCALE = 0.1
+    Wi = np.random.rand() * SCALE
+    Wh = np.random.rand() * SCALE
+    Wo = np.random.rand() * SCALE
+
+    aS, bS, y = forward_pass((Wi, Wh, Wo), x)
+    print backward_pass((Wi, Wh, Wo), x, z, aS, bS, y)
