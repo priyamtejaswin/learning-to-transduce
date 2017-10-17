@@ -80,7 +80,7 @@ def mse_loss(y, z):
     Inputs: output, target
     Outputs: mse
     """
-
+    # ipdb.set_trace()
     assert y.shape == z.shape, "-- y, z shape mis-match --"
     assert len(y.shape) == 1, "-- y shape is incorrect --"
     return 0.5 * np.mean(np.square(z - y), axis=0)
@@ -188,8 +188,6 @@ def main():
     Main code.
     """
 
-    gradient_check()
-
     LENGTH, SAMPLES = 10, 1000
     TEST_SAMPLES = 100
     EPOCHS = 5
@@ -214,11 +212,11 @@ def main():
         train_acc, train_loss = [], []
 
         for _ix in xrange(SAMPLES):
-            x, z = data[_ix], target[_ix]
+            x, z = np.atleast_2d(data[_ix]), np.array([target[_ix]])
             aS, bS, y = forward_pass((Wi, Wh, Wo), x)
             loss = mse_loss(y, z)
 
-            del_Wi, del_Wh, del_Wo = backward_pass((Wi, Wh, Wo), x, z, aS, bS, y)
+            del_Wo, del_Wh, del_Wi = backward_pass((Wi, Wh, Wo), x, z, aS, bS, y)
 
             Wi -= ALPHA * del_Wi
             Wh -= ALPHA * del_Wh
@@ -228,7 +226,7 @@ def main():
             train_loss.append(loss)
 
         for _ix in xrange(TEST_SAMPLES):
-            x, z = data[_ix], target[_ix]
+            x, z = np.atleast_2d(data[_ix]), np.array([target[_ix]])
             aS, bS, y = forward_pass((Wi, Wh, Wo), x)
             loss = mse_loss(y, z)
 
@@ -239,11 +237,13 @@ def main():
                     np.mean(test_loss), np.mean(test_acc))
 
     print "\nComplete.\n"
+    print "Trained parameters:\nWi %f\nWh %f\nWo %f\n"%(Wi, Wh, Wo)
     return
 
 
 if __name__ == '__main__':
     gradient_check()
+    main()
 
     # x = np.array([
     # [1, 1, 1, 1, 1],
