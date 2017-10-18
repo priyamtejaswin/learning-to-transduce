@@ -96,8 +96,8 @@ def backward_pass((Wi, Wh, Wo), x, z, aS, bS, y):
     LENGTH = x.shape[1] # LENGTH of sequence
     BSIZE = x.shape[0]
 
-    del_Wi = 0
-    del_Wh = 0
+    del_Wi = np.zeros(BSIZE)
+    del_Wh = np.zeros(BSIZE)
 
     ## del_Wo only has one term since
     ## Wo is only dependent on one activation.
@@ -115,6 +115,7 @@ def backward_pass((Wi, Wh, Wo), x, z, aS, bS, y):
     ## del_Wh, del_Wi require only 1 loop because
     ## the next layer has only one activation
     ## which occurs at the final timestep.
+    # ipdb.set_trace()
     for t in range(LENGTH)[::-1]:
         hidden_time_derivative = deriv_relu(aS[:, t]) * bS[:, t-1]
         del_Wh += hidden_constant * hidden_factor * hidden_time_derivative
@@ -188,9 +189,9 @@ def main():
     Main code.
     """
 
-    LENGTH, SAMPLES, BSIZE = 10, 1000, 100
+    LENGTH, SAMPLES, BSIZE = 8, 10000, 100
     TEST_SAMPLES = 100
-    EPOCHS = 10
+    EPOCHS = 5
     SCALE = 0.1
     ALPHA = 0.01
 
@@ -247,7 +248,7 @@ def main():
 
 if __name__ == '__main__':
     gradient_check()
-    # main()
+    main()
 
     # x = np.array([
     # [1, 1, 1, 1, 1],
