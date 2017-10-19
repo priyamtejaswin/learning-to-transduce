@@ -84,6 +84,63 @@ def loss(y, z):
     return 0.5 * np.sum(np.square(z - y), axis=0)
 
 
+def backward_pass((Wi, Wh, Wo), x, z, aS, bS, y):
+    """
+    Returns updates for parameters.
+    Inputs: (parameters), input, target, aState, bState, output
+    Outputs: gradients wrt parameters
+    """
+
+    assert y.shape == z.shape, "-- y, z shape mis-match -- %s %s"\
+        %(str(y.shape), str(z.shape))
+    LENGTH = x.shape[1]
+
+    del_Wi = np.zeros_like(Wi)
+    del_Wh = 0
+    del_Wo = 0
+
+    del_output = y - z
+
+    for t in range(LENGTH)[::-1]:
+        del_Wo += del_output[t] * bS[t]
+
+    return del_Wo
+
+
+def gradient_check():
+    """
+    Run a numerical gradient check for all model parameters.
+    """
+
+    print "Running numerical gradient check...\n"
+    SMALL_VAL = 1e-5
+    x = np.array([[1, 0, 0, 1, 1], [0, 1, 1, 0, 0]])
+    z = np.array([1, 1, 1, 1, 1])
+    print "Input:\n", x
+    print "Target:\n", '', z
+
+    Wi = np.random.rand(2)
+    Wh = np.random.rand()
+    Wo = np.random.rand()
+
+    aS, bS, y = forward_pass((Wi, Wh, Wo), x)
+    print "\nLoss:\n", loss(y, z)
+
+    del_Wo = backward_pass((Wi, Wh, Wo), x, z, aS, bS, y)
+
+    ## del_Wo
+    _, _, y = forward_pass((Wi, Wh, Wo+SMALL_VAL), x)
+    plus = loss(y, z)
+    _, _, y = forward_pass((Wi, Wh, Wo-SMALL_VAL), x)
+    minus = loss(y, z)
+    num_grad = (plus - minus)/(2*SMALL_VAL)
+    assert np.allclose(del_Wo, num_grad, rtol=1e-4), \
+        "-- Mismatch numerical: %f, analytical: % --f"%(del_Wo, num_grad)
+
+    print "\nPASSED\n"
+    return
+
+
 def main():
     """
     Main code.
@@ -92,17 +149,17 @@ def main():
     x = np.array([[1, 0, 0, 1, 1], [0, 1, 1, 0, 0]])
     z = np.array([1, 1, 1, 1, 1])
 
-    ipdb.set_trace()
-
     Wi = np.random.rand(2)
     Wh = np.random.rand()
     Wo = np.random.rand()
 
     aS, bS, y = forward_pass((Wi, Wh, Wo), x)
     print loss(y, z)
+    print backward_pass((Wi, Wh, Wo), x, z, aS, bS, y)
 
     return
 
 
 if __name__ == '__main__':
-    main()
+    # main()
+    gradient_check()
