@@ -39,16 +39,54 @@ def generate_data(size, bit_size):
     return np.array(data), np.array(target)
 
 
+def relu(x):
+    """
+    ReLU activation,
+    Inputs: any number
+    Outputs: ReLU'd number
+    """
+
+    return np.max((0, x))
+
+
+def forward_pass((Wi, Wh, Wo), x):
+    """
+    Run single instance of a forward pass.
+    Inputs: (weights), x_input
+    Outputs: S_input, S_activation, y
+    """
+
+    LENGTH = x.shape[1]
+    INPUT_DIM = x.shape[0]
+    assert Wi.shape == x[:, 0].shape, "-- Wi, input shape mis-match --"
+
+    aS = np.zeros(LENGTH+1)
+    bS = np.zeros_like(aS)
+    y = np.zeros(LENGTH)
+
+    for t in range(LENGTH):
+        aS[t] = np.sum(x[:, t] * Wi, axis=0) + (bS[t-1] * Wh)
+        bS[t] = relu(aS[t])
+        y[t] = bS[t] * Wo
+
+    return aS, bS, y
+
+
 def main():
     """
     Main code.
     """
 
-    data, target = generate_data(50, 5)
-    for _ix in range(data.shape[0]):
-        print data[_ix]
-        print np.atleast_2d(target[_ix])
-        print "----------------------\n"
+    x = np.array([[1, 0, 0, 1, 1], [0, 1, 1, 0, 0]])
+    z = np.array([1, 1, 1, 1, 1])
+
+    ipdb.set_trace()
+
+    Wi = np.random.rand(2)
+    Wh = np.random.rand()
+    Wo = np.random.rand()
+
+    aS, bS, y = forward_pass((Wi, Wh, Wo), x)
 
     return
 
