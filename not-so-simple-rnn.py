@@ -41,12 +41,22 @@ def generate_data(size, bit_size):
 
 def relu(x):
     """
-    ReLU activation,
+    ReLU activation.
     Inputs: any number
     Outputs: ReLU'd number
     """
 
     return np.max((0, x))
+
+
+def deriv_relu(x):
+    """
+    ReLU activation derivative.
+    Inputs: any number
+    Outputs: 1 if x>0 else 0
+    """
+
+    return 1 if x>0 else 0
 
 
 def forward_pass((Wi, Wh, Wo), x):
