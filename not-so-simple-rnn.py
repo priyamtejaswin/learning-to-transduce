@@ -72,6 +72,18 @@ def forward_pass((Wi, Wh, Wo), x):
     return aS, bS, y
 
 
+def loss(y, z):
+    """
+    Implements mse loss function.
+    Inputs: network output, target output
+    Outputs: single value(normed for the entire batch)
+    """
+
+    assert y.shape == z.shape, "-- y, z shape mis-match -- %s %s"\
+        %(str(y.shape), str(z.shape))
+    return 0.5 * np.sum(np.square(z - y), axis=0)
+
+
 def main():
     """
     Main code.
@@ -87,6 +99,7 @@ def main():
     Wo = np.random.rand()
 
     aS, bS, y = forward_pass((Wi, Wh, Wo), x)
+    print loss(y, z)
 
     return
 
