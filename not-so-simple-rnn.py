@@ -149,6 +149,7 @@ def gradient_check():
     print "\nLoss:\n", loss(y, z)
 
     del_Wi, del_Wh, del_Wo = backward_pass((Wi, Wh, Wo), x, z, aS, bS, y)
+    ipdb.set_trace()
 
     ## del_Wo
     _, _, y = forward_pass((Wi, Wh, Wo+SMALL_VAL), x)
@@ -195,20 +196,46 @@ def main():
     Main code.
     """
 
-    x = np.array([[1, 0, 0, 1, 1], [0, 1, 1, 0, 0]])
-    z = np.array([1, 1, 1, 1, 1])
+    NUM_SAMPLES, BIT_SIZE, EPOCHS = 5000, 5, 5
+    TEST_SAMPLES = 100
+    ALPHA = 0.01
+
+    data, target = generate_data(NUM_SAMPLES, BIT_SIZE)
+    test_data, test_target = generate_data(TEST_SAMPLES, BIT_SIZE)
 
     Wi = np.random.rand(2)
     Wh = np.random.rand()
     Wo = np.random.rand()
 
-    aS, bS, y = forward_pass((Wi, Wh, Wo), x)
-    print loss(y, z)
-    print backward_pass((Wi, Wh, Wo), x, z, aS, bS, y)
+    to_number = lambda a: a.dot(2**np.arange(a.size))
 
+    for _ep in xrange(EPOCHS):
+        for _ix in xrange(NUM_SAMPLES):
+            x, z = data[_ix], target[_ix]
+            aS, bS, y = forward_pass((Wi, Wh, Wo), x)
+            del_Wi, del_Wh, del_Wo = backward_pass((Wi, Wh, Wo), x, z, aS, bS, y)
+
+            ipdb.set_trace()
+
+            Wi -= (ALPHA * del_Wi)
+            Wh -= (ALPHA * del_Wh)
+            Wo -= (ALPHA * del_Wo)
+
+        TEST_ACC, TEST_LOSS = [], []
+        for _ix in xrange(TEST_SAMPLES):
+            x, z = test_data[_ix], test_target[_ix]
+            _, _, y = forward_pass((Wi, Wh, Wo), x)
+
+            TEST_LOSS.append(loss(y, z))
+            TEST_ACC.append(to_number(z) == to_number(np.round(y)))
+
+        print "Epoch %d, Loss %.2f, Accuracy %.2f"\
+                %(_ep+1, np.mean(TEST_LOSS), np.mean(TEST_ACC))
+
+    ipdb.set_trace()
     return
 
 
 if __name__ == '__main__':
-    main()
+    # main()
     gradient_check()
