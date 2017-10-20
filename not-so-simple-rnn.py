@@ -114,15 +114,19 @@ def backward_pass((Wi, Wh, Wo), x, z, aS, bS, y):
     for t in range(LENGTH)[::-1]:
         del_Wo += del_output[t] * bS[t]
 
-        hfac = 1
-        hcon = del_output[t] * Wo
+        hfac, ifac = 1, 1
+        hcon, icon = del_output[t] * Wo, del_output[t] * Wo
 
         for i in range(t+1)[::-1]:
             htime = deriv_relu(aS[i]) * bS[i-1]
             del_Wh += hcon * hfac * htime
             hfac *= deriv_relu(aS[i]) * Wh
 
-    return del_Wh, del_Wo
+            itime = deriv_relu(aS[i]) * x[:, i]
+            del_Wi += icon * ifac * itime
+            ifac *= deriv_relu(aS[i]) * Wh
+
+    return del_Wi, del_Wh, del_Wo
 
 
 def gradient_check():
@@ -144,7 +148,7 @@ def gradient_check():
     aS, bS, y = forward_pass((Wi, Wh, Wo), x)
     print "\nLoss:\n", loss(y, z)
 
-    del_Wh, del_Wo = backward_pass((Wi, Wh, Wo), x, z, aS, bS, y)
+    del_Wi, del_Wh, del_Wo = backward_pass((Wi, Wh, Wo), x, z, aS, bS, y)
 
     ## del_Wo
     _, _, y = forward_pass((Wi, Wh, Wo+SMALL_VAL), x)
@@ -164,6 +168,23 @@ def gradient_check():
     assert np.allclose(del_Wh, num_grad, rtol=1e-4), \
         "-- Mismatch numerical: %f, analytical: % --f"%(del_Wh, num_grad)
 
+    ## del_Wi_0
+    _, _, y = forward_pass((Wi + np.array([SMALL_VAL, 0]), Wh, Wo), x)
+    plus = loss(y, z)
+    _, _, y = forward_pass((Wi - np.array([SMALL_VAL, 0]), Wh, Wo), x)
+    minus = loss(y, z)
+    num_grad = (plus - minus)/(2*SMALL_VAL)
+    assert np.allclose(del_Wi[0], num_grad, rtol=1e-4), \
+        "-- Mismatch numerical: %f, analytical: % --f"%(del_Wi[0], num_grad)
+
+    ## del_Wi_1
+    _, _, y = forward_pass((Wi + np.array([0, SMALL_VAL]), Wh, Wo), x)
+    plus = loss(y, z)
+    _, _, y = forward_pass((Wi - np.array([0, SMALL_VAL]), Wh, Wo), x)
+    minus = loss(y, z)
+    num_grad = (plus - minus)/(2*SMALL_VAL)
+    assert np.allclose(del_Wi[1], num_grad, rtol=1e-4), \
+        "-- Mismatch numerical: %f, analytical: % --f"%(del_Wi[1], num_grad)
 
     print "\nPASSED\n"
     return
