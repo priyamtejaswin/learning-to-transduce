@@ -136,8 +136,8 @@ def gradient_check():
 
     print "\nRunning numerical gradient check...\n"
     SMALL_VAL = 1e-5
-    x = np.array([[1, 0, 0, 1, 1], [0, 1, 1, 0, 0]])
-    z = np.array([1, 1, 1, 1, 1])
+    x = np.array([[1, 1, 0, 1, 1], [0, 1, 0, 0, 0]])
+    z = np.array([1, 0, 1, 1, 1])
     print "Input:\n", x
     print "Target:\n", '', z
 
@@ -149,7 +149,6 @@ def gradient_check():
     print "\nLoss:\n", loss(y, z)
 
     del_Wi, del_Wh, del_Wo = backward_pass((Wi, Wh, Wo), x, z, aS, bS, y)
-    ipdb.set_trace()
 
     ## del_Wo
     _, _, y = forward_pass((Wi, Wh, Wo+SMALL_VAL), x)
@@ -196,16 +195,16 @@ def main():
     Main code.
     """
 
-    NUM_SAMPLES, BIT_SIZE, EPOCHS = 5000, 5, 5
+    NUM_SAMPLES, BIT_SIZE, EPOCHS = 1000, 4, 25
     TEST_SAMPLES = 100
-    ALPHA = 0.01
+    ALPHA = 0.0005
 
     data, target = generate_data(NUM_SAMPLES, BIT_SIZE)
     test_data, test_target = generate_data(TEST_SAMPLES, BIT_SIZE)
 
-    Wi = np.random.rand(2)
-    Wh = np.random.rand()
-    Wo = np.random.rand()
+    Wi = np.random.rand(2) * 0.1
+    Wh = np.random.rand() * 0.1
+    Wo = np.random.rand() * 0.1
 
     to_number = lambda a: a.dot(2**np.arange(a.size))
 
@@ -215,7 +214,9 @@ def main():
             aS, bS, y = forward_pass((Wi, Wh, Wo), x)
             del_Wi, del_Wh, del_Wo = backward_pass((Wi, Wh, Wo), x, z, aS, bS, y)
 
-            ipdb.set_trace()
+            del_Wi = np.clip(del_Wi, -0.25, 0.25)
+            del_Wh = np.clip(del_Wh, -0.25, 0.25)
+            del_Wo = np.clip(del_Wo, -0.25, 0.25)
 
             Wi -= (ALPHA * del_Wi)
             Wh -= (ALPHA * del_Wh)
@@ -232,10 +233,9 @@ def main():
         print "Epoch %d, Loss %.2f, Accuracy %.2f"\
                 %(_ep+1, np.mean(TEST_LOSS), np.mean(TEST_ACC))
 
-    ipdb.set_trace()
     return
 
 
 if __name__ == '__main__':
-    # main()
     gradient_check()
+    main()
