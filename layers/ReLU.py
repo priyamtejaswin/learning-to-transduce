@@ -1,3 +1,0 @@
-"""
-Rectified Linear Unit 
-"""
