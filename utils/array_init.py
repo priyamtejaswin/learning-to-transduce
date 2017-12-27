@@ -1,11 +1,13 @@
 import numpy as np
 
-def array_init(shape, vtype="zeros", seed=None):
-    if seed is not None:
+def array_init(shape, vtype="rand", seed=1234):
+    """Init ndarray as ones, zeros or rand"""
+
+    if seed is not False:
         np.random.seed(seed)
 
     if type(shape) not in (int, tuple, list):
-        raise AttributeError("shape has to be int, tuple or list. Input:", str(type(shape)))
+        raise AttributeError("shape has to be int, tuple or list. Input:%s"%str(type(shape)))
     else:
         if isinstance(shape, int):
             shape = (shape, 1)
@@ -17,7 +19,10 @@ def array_init(shape, vtype="zeros", seed=None):
         elif vtype == "rand":
             return np.random.rand(*shape) * 0.1 # Need to expand the shape.
         else:
-            raise AttributeError("vtype is not ones, zeros or rand. Input:", str(vtype))
+            raise AttributeError("vtype is not ones, zeros or rand. Input:%s"%str(vtype))
 
 if __name__ == '__main__':
-    pass
+    print array_init(5) # random
+    print array_init((5, 3), "ones")
+    print array_init([3, 5], "zeros")
+    print array_init([3, 3], "mmmm")
