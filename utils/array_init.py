@@ -1,7 +1,10 @@
 import numpy as np
 
 def array_init(shape, vtype="rand", seed=1234):
-    """Init ndarray as ones, zeros or rand"""
+    """
+    Init ndarray as ones, zeros or rand.
+    If shape is a int, it will return (shape, 1).
+    """
 
     if seed is not False:
         np.random.seed(seed)
