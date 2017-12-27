@@ -1,14 +1,18 @@
-from abc import ABCMeta, abstractmethod
+import abc
 
 class AbstractLayer(object):
     """Abstract class for layers."""
 
-    __metaclass__ = ABCMeta
+    __metaclass__ = abc.ABCMeta
 
-    @abstractmethod
+    @abc.abstractmethod
     def forward(self, x):
         return
 
-    @abstractmethod
+    @abc.abstractmethod
     def backward(self, current_error):
+        return
+
+    @abc.abstractmethod
+    def return_weights(self):
         return
