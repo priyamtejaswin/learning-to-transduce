@@ -16,3 +16,6 @@ class AbstractLayer(object):
     @abc.abstractmethod
     def return_weights(self):
         return
+
+if __name__ == '__main__':
+        pass
