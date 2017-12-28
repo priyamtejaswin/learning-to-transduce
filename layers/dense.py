@@ -9,11 +9,11 @@ class Dense(AbstractLayer):
     def __init__(self, n_in, n_out):
         self.weights    = np.random.randn(n_in, n_out) * 0.01
         self.bias       = np.zeros(n_out)
-        self.weights_grad = None
-        self.bias_grad  = None
+        self.weights_grad = None ## why None? why initialise at all?
+        self.bias_grad  = None ## why not let them be created during backward pass?
 
     def forward(self, x):
-        self.input = deepcopy(x)
+        self.input = deepcopy(x) ## is this really required?
         self.output = np.dot(self.input, self.weights) + self.bias
         return self.output
 
@@ -23,11 +23,14 @@ class Dense(AbstractLayer):
         output = dL_dx
         also save, dL_dW, dL_db
         """
-        self.output_grad    = deepcopy(current_error)
-        self.input_grad     = np.dot(self.output_grad, self.weights.T)
+        assert self.current_error.shape == self.output.shape, "incorrect error shape" ## assert before starting?
+
+        self.output_grad    = deepcopy(current_error) ## is this really required?
+        self.input_grad     = np.dot(self.output_grad, self.weights.T) ## del_error * del_local
         self.weights_grad   = np.dot(self.input.T, self.output_grad)
-        self.bias_grad      = self.output_grad.sum(axis=0) 
-        self.check_grad_shapes() # built in self check on variables and their gradients  
+        self.bias_grad      = self.output_grad.sum(axis=0)
+
+        self.check_grad_shapes() # built in self check on variables and their gradients
         return self.input_grad
 
     def check_grad_shapes(self):
@@ -52,6 +55,6 @@ if __name__ == '__main__':
         error = np.zeros_like(f) + 1.0
         d.backward(error)
     except:
-        print("Backward pass failed") 
+        print("Backward pass failed")
     else:
         print("Backward pass shapes check passed")
