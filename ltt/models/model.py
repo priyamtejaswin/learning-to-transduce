@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 from ..layers import AbstractLayer
+import numpy as np
 
 class Model(object):
     """
@@ -11,7 +12,7 @@ class Model(object):
     def:forward will just return the prediction.
     """
 
-    def __init__(self, name, loss_layer):
+    def __init__(self, name, loss_layer=None):
         self.name = name
         self.loss_layer = loss_layer
         self.sequence = []
@@ -40,12 +41,12 @@ class Model(object):
     def do_loss(self, target):
         assert target.shape == self.output.shape, "output and target shapes do not match"
         self.loss = self.loss_layer.forward(self.output, target)
-        self.loss_grad = self.loss_layer.backward(target)
+        self.loss_grad = self.loss_layer.backward(self.output, target)
         return self.loss
 
     def do_backward(self):
         del_error = self.loss_grad
-        for ix, lname in reversed(enumerate(self.sequence)):
+        for ix, lname in list(enumerate(self.sequence))[::-1]:
             del_error = self.layers[lname].backward(del_error)
 
         return
@@ -56,13 +57,21 @@ class Model(object):
 
 
 def model_test():
-    from ..layers import Dense
-    d1 = Dense(n_in=5, n_out=6, name="d1")
-    model = Model(name="m1")
+    from ..layers import Dense, MSE
+    d1 = Dense(n_in=3, n_out=4, name="d1")
+    l1 = MSE("loss1")
 
+    model = Model(name="m1", loss_layer=l1)
     model.add(d1)
+
     print model.sequence
     print model.layers
 
-    # model.add(d1) ## should fail.
+    x = np.random.rand(2, 3)
+    t = np.ones((2, 4))
+
+    m_output = model.do_forward(x)
+    m_loss = model.do_loss(target=t)
+    model.do_backward()
+
     print "PASSED"
