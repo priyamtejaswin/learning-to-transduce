@@ -7,17 +7,16 @@ from copy import deepcopy
 class ReLU(AbstractLayer):
     """ ReLU activation function """
 
-    def __init__(self):
-        self.input = None
-        self.output = None
+    def __init__(self, name):
+        self.name = name 
 
     def forward(self, x):
-        self.input = deepcopy(x)
+        self.input = x 
         self.output = np.maximum(self.input, 0)
         return self.output
 
     def backward(self, current_error):
-        self.output_grad = deepcopy(current_error)
+        self.output_grad = current_error 
         mask = 1.0 * (self.input > 0)
         self.input_grad = mask * self.output_grad
         self.check_grad_shapes()
@@ -33,8 +32,7 @@ class ReLU(AbstractLayer):
     def return_grads(self):
         return None
 
-if __name__ == '__main__':
-
+def test():
     try:
         import ipdb; ipdb.set_trace()
         x = np.random.randn(5, 10) * 0.1
