@@ -35,6 +35,9 @@ class ReLU(AbstractLayer):
     def return_grads(self):
         return None
 
+    def weights_iter(self):
+        return np.nditer(np.array([]), op_flags=["readwrite"], flags=["zerosize_ok"])
+
 def relu_test():
     x = np.random.randn(5, 10) * 0.1
     rel = ReLU(name="relu1")

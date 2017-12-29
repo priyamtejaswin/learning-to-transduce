@@ -32,6 +32,9 @@ class Tanh(AbstractLayer):
     def return_grads(self):
         return None
 
+    def weights_iter(self):
+        return np.nditer(np.array([]), op_flags=['readwrite'], flags=["zerosize_ok"])
+
 def tanh_test():
 
     import ipdb; ipdb.set_trace()

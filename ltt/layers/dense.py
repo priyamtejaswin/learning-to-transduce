@@ -3,6 +3,7 @@ from .abstract_layer import AbstractLayer
 from ..utils import array_init
 import numpy as np
 from copy import deepcopy
+from itertools import chain
 
 class Dense(AbstractLayer):
     """ Fully connected layer """
@@ -43,6 +44,11 @@ class Dense(AbstractLayer):
 
     def return_grads(self):
         return (self.weights_grad, self.bias_grad)
+
+    def weights_iter(self):
+        iter_weights = np.nditer(self.weights, op_flags=["readwrite"])
+        iter_bias = np.nditer(self.bias, op_flags=["readwrite"])
+        return chain(iter_weights, iter_bias)
 
 def dense_test():
     x = np.random.rand(5, 10) * 0.1
