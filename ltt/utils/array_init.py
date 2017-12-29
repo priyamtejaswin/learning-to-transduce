@@ -13,7 +13,7 @@ def array_init(shape, vtype="rand", seed=1234):
         raise AttributeError("shape has to be int, tuple or list. Input:%s"%str(type(shape)))
     else:
         if isinstance(shape, int):
-            shape = (shape, 1)
+            shape = (1, shape)
 
         if vtype == "zeros":
             return np.zeros(shape)
