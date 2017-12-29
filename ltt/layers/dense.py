@@ -10,7 +10,7 @@ class Dense(AbstractLayer):
     def __init__(self, n_in, n_out, name):
         self.weights    = array_init((n_in, n_out), vtype="rand") # np.random.randn(n_in, n_out) * 0.01
         self.bias       = array_init(n_out)
-        self.name       = name 
+        self.name       = name
 
     def forward(self, x):
         assert x.shape[1] == self.weights.shape[0]
@@ -28,7 +28,7 @@ class Dense(AbstractLayer):
         self.output_grad    = current_error
         self.input_grad     = np.dot(self.output_grad, self.weights.T)
         self.weights_grad   = np.dot(self.input.T, self.output_grad)
-        self.bias_grad      = self.output_grad.sum(axis=0)
+        self.bias_grad      = self.output_grad.sum(axis=0, keepdims=True)
         self.check_grad_shapes() # built in self check on variables and their gradients
         return self.input_grad
 
@@ -44,15 +44,11 @@ class Dense(AbstractLayer):
     def return_grads(self):
         return (self.weights_grad, self.bias_grad)
 
-def test():
-    try:
-        x = np.random.rand(5, 10) * 0.1
-        d = Dense(n_in=10, n_out=20)
-        # import ipdb; ipdb.set_trace()
-        f = d.forward(x)
-        error = np.zeros_like(f) + 1.0
-        d.backward(error)
-    except:
-        print("Backward pass failed")
-    else:
-        print("Backward pass shapes check passed")
+def dense_test():
+    x = np.random.rand(5, 10) * 0.1
+    d = Dense(n_in=10, n_out=20, name="Dense1")
+    # import ipdb; ipdb.set_trace()
+    f = d.forward(x)
+    error = np.zeros_like(f) + 1.0
+    d.backward(error)
+    print("PASSED")
