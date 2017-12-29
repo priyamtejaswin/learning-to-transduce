@@ -1,5 +1,6 @@
-from __future__ import print_function
-from abstract_layer import AbstractLayer
+from __future__ import print_function, absolute_import
+from .abstract_layer import AbstractLayer
+from ..utils import array_init
 import numpy as np
 from copy import deepcopy
 
@@ -8,7 +9,7 @@ class Dense(AbstractLayer):
 
     def __init__(self, n_in, n_out):
         self.weights    = np.random.randn(n_in, n_out) * 0.01
-        self.bias       = np.zeros(n_out)
+        self.bias       = array_init(n_out)
         self.weights_grad = None
         self.bias_grad  = None
 
@@ -26,8 +27,8 @@ class Dense(AbstractLayer):
         self.output_grad    = deepcopy(current_error)
         self.input_grad     = np.dot(self.output_grad, self.weights.T)
         self.weights_grad   = np.dot(self.input.T, self.output_grad)
-        self.bias_grad      = self.output_grad.sum(axis=0) 
-        self.check_grad_shapes() # built in self check on variables and their gradients  
+        self.bias_grad      = self.output_grad.sum(axis=0)
+        self.check_grad_shapes() # built in self check on variables and their gradients
         return self.input_grad
 
     def check_grad_shapes(self):
@@ -52,6 +53,6 @@ if __name__ == '__main__':
         error = np.zeros_like(f) + 1.0
         d.backward(error)
     except:
-        print("Backward pass failed") 
+        print("Backward pass failed")
     else:
         print("Backward pass shapes check passed")
