@@ -3,6 +3,7 @@ from ..models import Model
 from ..layers import Dense, MSE
 import itertools
 import numpy as np
+from copy import deepcopy
 
 class SGD(object):
     """
@@ -16,7 +17,6 @@ class SGD(object):
 
     def update(self, model):
         assert isinstance(model, Model)
-        import ipdb; ipdb.set_trace()
 
         for lname, layer in model.layers.iteritems():
             weights = layer.return_weights()
@@ -25,13 +25,11 @@ class SGD(object):
             if weights is None:
                 continue
 
-            new_weights = []
             for w, g in itertools.izip(weights, grads):
                 assert w.shape == g.shape, "weights and grads shape do not match during update"
                 w -= g * self.alpha
-                new_weights.append(w)
 
-            layer.set_weights(new_weights)
+            layer.set_weights(deepcopy(weights))
 
         self.counter += 1
 
@@ -50,5 +48,5 @@ def sgd_test():
 
     sgd = SGD()
 
-    import ipdb; ipdb.set_trace()
     sgd.update(mmodel)
+    print "PASSED"
