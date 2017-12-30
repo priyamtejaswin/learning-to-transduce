@@ -13,6 +13,9 @@ class Model(object):
     """
 
     def __init__(self, name, loss_layer=None):
+        if loss_layer is not None:
+            assert isinstance(loss_layer, AbstractLayer), "loss is not AbstractLayer object"
+
         self.name = name
         self.loss_layer = loss_layer
         self.sequence = []
