@@ -35,6 +35,9 @@ class Sigmoid(AbstractLayer):
     def weights_iter(self):
         return np.nditer(np.array([]), op_flags=["readwrite"], flags=["zerosize_ok"])
 
+    def grads_iter(self):
+        return np.nditer(np.array([]), op_flags=["readonly"], flags=["zerosize_ok"])
+
 def sigmoid_test():
 
     # import ipdb; ipdb.set_trace()
