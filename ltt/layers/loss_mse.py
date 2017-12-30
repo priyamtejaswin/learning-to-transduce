@@ -11,13 +11,13 @@ class MSE(AbstractLayer):
     def forward(self, y_pred, y_true):
         assert y_pred.shape == y_true.shape, "preds, target shape does not match"
         self.loss = 0.5 * np.mean(
-                np.square(y_pred - y_true), axis=0, keepdims=True
+                np.sum(np.square(y_pred - y_true), axis=1)
         )
         return self.loss
 
     def backward(self, y_pred, y_true):
         assert y_pred.shape == y_true.shape, "preds, target shape does not match"
-        self.output_grad = y_pred - y_true
+        self.output_grad = (y_pred - y_true)/y_pred.shape[0]
         self.input_grad = self.output_grad ## since its the loss layer
         return self.input_grad
 
@@ -29,6 +29,9 @@ class MSE(AbstractLayer):
 
     def weights_iter(self):
         return np.nditer(np.array([]), op_flags=["readwrite"], flags=["zerosize_ok"])
+
+    def grads_iter(self):
+        return np.nditer(np.array([]), op_flags=["readonly"], flags=["zerosize_ok"])
 
 
 def mse_test():

@@ -50,6 +50,11 @@ class Dense(AbstractLayer):
         iter_bias = np.nditer(self.bias, op_flags=["readwrite"])
         return chain(iter_weights, iter_bias)
 
+    def grads_iter(self):
+        iter_grad_weights = np.nditer(self.weights_grad, op_flags=["readonly"])
+        iter_grad_bias = np.nditer(self.bias_grad, op_flags=["readonly"])
+        return chain(iter_grad_weights, iter_grad_bias)
+
 def dense_test():
     x = np.random.rand(5, 10) * 0.1
     d = Dense(n_in=10, n_out=20, name="Dense1")
