@@ -25,7 +25,7 @@ class SGD(object):
             new_weights = []
             for w, g in itertools.izip(weights, w_grads):
                 assert w.shape == g.shape, "weights and grads shape do not match during update"
-                w -= g/model.batch_size
+                w -= g * self.alpha
                 new_weights.append(w)
 
             layer.set_weights(new_weights)
