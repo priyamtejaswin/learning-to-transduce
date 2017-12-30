@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 from ..models import Model
+from ..layers import Dense, MSE
 import itertools
 
 class SGD(object):
@@ -14,6 +15,7 @@ class SGD(object):
 
     def update(self, model):
         assert isinstance(model, Model)
+        import ipdb; ipdb.set_trace()
 
         for lname, layer in model.layers.iteritem():
             weights = layer.return_weights()
@@ -33,4 +35,15 @@ class SGD(object):
         self.counter += 1
 
 def sgd_test():
-    pass
+    mmodel = Model("mmodel", loss_layer=MSE("mse_loss"))
+    d1 = Dense(3, 4, "d1")
+
+    x = np.random.rand(2, 3)
+    t = np.ones((2, 4))
+
+    mmodel.add(d1)
+
+    sgd = SGD()
+
+    import ipdb; ipdb.set_trace()
+    sgd.update(mmodel)
