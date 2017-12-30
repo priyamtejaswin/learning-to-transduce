@@ -26,6 +26,9 @@ class Model(object):
         assert isinstance(layer, AbstractLayer), "object is not AbstractLayer object"
         assert layer.name not in self.layers, "layer name already in model"
 
+        if len(self.sequence) == 0:
+            self.feature_size = layer.weights.shape[0]
+
         self.layers[layer.name] = layer
         self.sequence.append(layer.name)
         return
