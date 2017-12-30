@@ -25,5 +25,9 @@ class AbstractLayer(object):
     def weights_iter(self):
         return 
 
+    @abc.abstractmethod 
+    def grads_iter(self):
+        return
+
 if __name__ == '__main__':
         pass
