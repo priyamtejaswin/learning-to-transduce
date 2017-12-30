@@ -40,10 +40,15 @@ class Dense(AbstractLayer):
         assert self.bias.shape == self.bias_grad.shape, "bias and bias_grad shapes do not match"
 
     def return_weights(self):
-        return (self.weights, self.bias)
+        return (deepcopy(self.weights), deepcopy(self.bias))
+
+    def set_weights(self, (w, b)):
+        self.weights = w
+        self.bias = b
+        return
 
     def return_grads(self):
-        return (self.weights_grad, self.bias_grad)
+        return (deepcopy(self.weights_grad), deepcopy(self.bias_grad))
 
     def weights_iter(self):
         iter_weights = np.nditer(self.weights, op_flags=["readwrite"])

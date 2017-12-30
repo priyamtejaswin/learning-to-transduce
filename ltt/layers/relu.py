@@ -32,12 +32,15 @@ class ReLU(AbstractLayer):
     def return_weights(self):
         return None
 
+    def set_weights(self):
+        return None
+
     def return_grads(self):
         return None
 
     def weights_iter(self):
         return np.nditer(np.array([]), op_flags=["readwrite"], flags=["zerosize_ok"])
-    
+
     def grads_iter(self):
         return np.nditer(np.array([]), op_flags=["readonly"], flags=["zerosize_ok"])
 

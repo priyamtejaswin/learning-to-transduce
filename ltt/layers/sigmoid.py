@@ -8,17 +8,17 @@ class Sigmoid(AbstractLayer):
     """ Sigmoid activation function """
 
     def __init__(self, name):
-        self.name = name 
+        self.name = name
 
     def forward(self, x):
-        self.input = x 
-        self.output = 1 / (1 + np.exp(-self.input)) 
+        self.input = x
+        self.output = 1 / (1 + np.exp(-self.input))
         return self.output
 
     def backward(self, current_error):
-        self.output_grad = current_error 
-        dy_dx = np.multiply( self.output , (1.0 - self.output)) 
-        self.input_grad  = self.output_grad * dy_dx  
+        self.output_grad = current_error
+        dy_dx = np.multiply( self.output , (1.0 - self.output))
+        self.input_grad  = self.output_grad * dy_dx
         self.check_grad_shapes()
         return self.input_grad
 
@@ -27,6 +27,9 @@ class Sigmoid(AbstractLayer):
         assert self.output.shape == self.output_grad.shape, "output and output_grad shapes do not match"
 
     def return_weights(self):
+        return None
+
+    def set_weights(self):
         return None
 
     def return_grads(self):
@@ -41,10 +44,9 @@ class Sigmoid(AbstractLayer):
 def sigmoid_test():
 
     # import ipdb; ipdb.set_trace()
-    x = np.random.randn(5,10) 
-    sigm = Sigmoid("sigmoid") 
-    y = sigm.forward(x) 
-    y_grad = np.zeros_like(y) + 1.0 
+    x = np.random.randn(5,10)
+    sigm = Sigmoid("sigmoid")
+    y = sigm.forward(x)
+    y_grad = np.zeros_like(y) + 1.0
     x_grad = sigm.backward(y_grad)
     print("PASSED")
-

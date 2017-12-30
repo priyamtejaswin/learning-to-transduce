@@ -23,10 +23,14 @@ class AbstractLayer(object):
 
     @abc.abstractmethod
     def weights_iter(self):
-        return 
+        return
 
-    @abc.abstractmethod 
+    @abc.abstractmethod
     def grads_iter(self):
+        return
+
+    @abc.abstractmethod
+    def set_weights(self):
         return
 
 if __name__ == '__main__':
