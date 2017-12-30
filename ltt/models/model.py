@@ -12,7 +12,11 @@ class Model(object):
     def:forward will just return the prediction.
     """
 
-    def __init__(self, name, loss_layer=None):
+    def __init__(self, name, loss_layer=None, optimizer=None):
+        if loss_layer is not None:
+            assert isinstance(loss_layer, AbstractLayer), "loss is not AbstractLayer object"
+
+        self.optimizer = optimizer
         self.name = name
         self.loss_layer = loss_layer
         self.sequence = []
@@ -27,6 +31,8 @@ class Model(object):
         return
 
     def do_forward(self, x):
+        self.batch_size = x.shape[0] * 1.0
+
         mlimit = len(self.layers) - 1
         for ix, lname in enumerate(self.sequence):
             layer = self.layers[lname]
@@ -52,16 +58,19 @@ class Model(object):
         return
 
     def do_update(self):
-        """HARDCODED AS sgd FOR NOW!!!"""
+        self.optimizer.update(self)
         pass
 
 
 def model_test():
     from ..layers import Dense, MSE
+    from ..optimizers import SGD
+
     d1 = Dense(n_in=3, n_out=4, name="d1")
     l1 = MSE("loss1")
+    sgd = SGD()
 
-    model = Model(name="m1", loss_layer=l1)
+    model = Model(name="m1", loss_layer=l1, optimizer=sgd)
     model.add(d1)
 
     print model.sequence
@@ -73,5 +82,6 @@ def model_test():
     m_output = model.do_forward(x)
     m_loss = model.do_loss(target=t)
     model.do_backward()
+    model.do_update()
 
     print "PASSED"

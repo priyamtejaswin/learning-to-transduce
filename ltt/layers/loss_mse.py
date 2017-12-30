@@ -24,6 +24,9 @@ class MSE(AbstractLayer):
     def return_weights(self):
         return None
 
+    def set_weights(self):
+        return None
+
     def return_grads(self):
         return None
 
