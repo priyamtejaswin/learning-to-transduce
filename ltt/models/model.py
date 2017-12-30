@@ -30,7 +30,7 @@ class Model(object):
         return
 
     def do_forward(self, x):
-        self.batch_size = x.shape[0]
+        self.batch_size = x.shape[0] * 1.0
 
         mlimit = len(self.layers) - 1
         for ix, lname in enumerate(self.sequence):
