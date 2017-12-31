@@ -41,6 +41,25 @@ class NeuralStack(BaseMemory):
                 self.s_vec[0, i] = np.maximum(0,
                     s_prev[0, i] - np.maximum(0, u - np.sum(s_prev[0, i+1:self.timestep]))
                 )
+        return
+
+    def get_r(self):
+        if self.timestep == -1:
+            raise AttributeError("timestep is still -1. Something went wrong.")
+
+        rvals = [] ## should be a list of tuples
+        for i in range(self.timestep+1):
+            rvals.append(
+                (np.minimum(
+                    self.s_vec[0, i],
+                    np.maximum(0, 1.0 - np.sum(self.s_vec[0, i+1:self.timestep+1]))
+                    ) , self.v_mat[i]))
+
+        assert isinstance(rvals[0], tuple)
+        assert len(rvals[0]) == 2
+
+        print "\nReturning summed:", rvals
+        return np.sum(map(lambda t: t[0] * t[1], rvals))
 
     def forward(self, v, u, d):
         assert v.shape == (1, self.embedding_size), "v vector shape and embedding_size do not match"
@@ -51,6 +70,7 @@ class NeuralStack(BaseMemory):
 
         self.v_mat[self.timestep] = v
         self.update_s(u, d)
+        print self.get_r()
 
         return
 
