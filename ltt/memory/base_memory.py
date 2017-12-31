@@ -1,7 +1,7 @@
 import abc
 
 class BaseMemory(object):
-    """Abstract class for nerual memory structures."""
+    """Abstract class for neural memory structures."""
 
     __metaclass__ = abc.ABCMeta
 
