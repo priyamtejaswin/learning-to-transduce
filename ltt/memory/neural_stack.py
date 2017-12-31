@@ -20,6 +20,14 @@ class NeuralStack(BaseMemory):
         self.s_vec = array_init(max_time, vtype="zeros")
         self.timestep = -1 ## stack is empty
 
+    def print_stack(self):
+        if self.timestep == -1:
+            raise AttributeError("timestep is still -1. Something went wrong.")
+        print "\nStack at timestep %d"%self.timestep
+        for ix, (v,s) in enumerate(zip(self.v_mat, self.s_vec[0])):
+            print ix, (v, s)
+        return
+
     def update_s(self, u, d):
         if self.timestep == -1:
             raise AttributeError("timestep is still -1. Something went wrong.")
@@ -30,11 +38,11 @@ class NeuralStack(BaseMemory):
             if i == self.timestep:
                 self.s_vec[0, i] = d ## [0, i] because s_vec is a row vector shape(1, max_time)
             else:
-                self.s_vec = np.maximum(0,
+                self.s_vec[0, i] = np.maximum(0,
                     s_prev[0, i] - np.maximum(0, u - np.sum(s_prev[0, i+1:self.timestep]))
                 )
 
-    def forward(self, (v, u, d)):
+    def forward(self, v, u, d):
         assert v.shape == (1, self.embedding_size), "v vector shape and embedding_size do not match"
         if self.timestep >= (self.max_time-1):
             raise AttributeError("Stack timestep has reached max_time: %d"%self.max_time)
@@ -53,6 +61,15 @@ class NeuralStack(BaseMemory):
 def stack_test():
     ns = NeuralStack(embedding_size=1, max_time=3)
     print ns.name
+
+    ns.forward(np.array([[1]]), 0, 0.8)
+    ns.print_stack()
+    ns.forward(np.array([[2]]), 0.1, 0.5)
+    ns.print_stack()
+    ns.forward(np.array([[3]]), 0.9, 0.9)
+    ns.print_stack()
+
+    ## ns.forward(np.array([[99]]), 0.9, 0.9) should raise AttributeError
 
     print "PASSED"
 
