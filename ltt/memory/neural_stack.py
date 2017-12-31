@@ -70,9 +70,7 @@ class NeuralStack(BaseMemory):
 
         self.v_mat[self.timestep] = v
         self.update_s(u, d)
-        print self.get_r()
-
-        return
+        return self.get_r()
 
     def backward(self):
         return
