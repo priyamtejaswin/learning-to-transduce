@@ -6,4 +6,5 @@ from .relu import *
 from .sigmoid import *
 from .tanh import *
 from .loss_mse import *
+from .rnn import *
 from ..utils import array_init
