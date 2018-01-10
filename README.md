@@ -6,7 +6,7 @@ Writing your own framework is every ML programmer's dream. But don't just take o
 
 All kidding aside, developing a simple ML framework which can be used for different projects from scratch really is one of our goals. We believe it is the ultimate test of theory, design and programming skills. Inspired from [Keras](https://github.com/fchollet/keras/), this repository tracks our attempts towards building an extensible, modular ML framework. As a poc, we chose to implement the [Learning to Transduce Deepmind paper](https://pdfs.semanticscholar.org/b6e5/7009cd5a6ce0825b3dd1fb1fa535e52c4f3d.pdf) using this framework. 
 
-**NOTE**: *This is a work in progress. Scroll down to the ends to see which features are in progress. You can visit our (Trello board: transduction-ftw)[https://trello.com/b/NxhVzQF9] for more details.*
+**NOTE**: *This is a work in progress. Scroll down to the ends to see which features are in progress. You can visit our [Trello board: transduction-ftw](https://trello.com/b/NxhVzQF9) for more details.*
 
 ## Codebase
 **master** is the core deployment branch. The code is organised as follows.
@@ -246,7 +246,7 @@ The complete example is in `./mnist_test.py`.
 - [ ] Testing `neural_sack.backward`
 - [ ] Gradient checking and integration for `neural_sack.backward`
 
-You can visit our (Trello board: transduction-ftw)[https://trello.com/b/NxhVzQF9] for more details.
+You can visit our [Trello board: transduction-ftw](https://trello.com/b/NxhVzQF9) for more details.
 
 ## Contribute
 To add a new layer, be sure to make it conform with the `./ltt/layers/abstract_layer.py`. You can refer to `./ltt/layers/dense.py`. To add a new `memory` construct, make sure it has a forward and backward pass since it will be one of the intermeidate layers in the model. Fork, raise a PR and add @akshaychawla or @priyamtejaswin for reviewing.
