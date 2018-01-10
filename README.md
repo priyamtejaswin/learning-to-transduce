@@ -4,7 +4,7 @@
 ## Introduction
 Writing your own framework is every ML programmer's dream. But don't just take our word for it! One need not look beyond the countless libraries in every language imaginable from Crystal to Ruby. Why not add another framework which no one will ever hear of to the mix?
 
-All kidding aside, developing a simple ML framework which can be used for different projects from scratch really is one of our goals. We believe it is the ultimate test of theory, design and programming skills. Inspired from [Keras](https://github.com/fchollet/keras/), repository tracks our attempts towards building an extensible, modular ML framework. As a poc, we chose to implement the [Learning to Transduce Deepmind paper](https://pdfs.semanticscholar.org/b6e5/7009cd5a6ce0825b3dd1fb1fa535e52c4f3d.pdf) using this framework. 
+All kidding aside, developing a simple ML framework which can be used for different projects from scratch really is one of our goals. We believe it is the ultimate test of theory, design and programming skills. Inspired from [Keras](https://github.com/fchollet/keras/), this repository tracks our attempts towards building an extensible, modular ML framework. As a poc, we chose to implement the [Learning to Transduce Deepmind paper](https://pdfs.semanticscholar.org/b6e5/7009cd5a6ce0825b3dd1fb1fa535e52c4f3d.pdf) using this framework. 
 
 **NOTE**: *This is a work in progress. Scroll down to the ends to see which features are pending.*
 
@@ -242,5 +242,6 @@ class SGD(object):
 
 The complete example is in `./mnist_test.py` . Feel free to play around with different activation functions or add your own loss layers. Just follow the base classes and `./ltt/layers/abstract_layer.py` for reference.
 
-## Progress
-TODO
+## In progress
+- [ ] Testing `neural_sack.backward`
+- [ ] Gradient checking and integration for `neural_sack.backward`
