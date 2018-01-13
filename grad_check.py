@@ -4,6 +4,7 @@ from ltt.layers import Dense, ReLU, Tanh, Sigmoid, MSE
 from copy import deepcopy 
 from itertools import izip, chain
 from ltt.models import Model 
+from ltt.layers import RNN 
 
 def gradient_check(model):
     """
@@ -11,7 +12,7 @@ def gradient_check(model):
     """ 
 
     # dummy data 
-    x = np.random.randn(1, model.feature_size) 
+    x = np.random.randn(4, model.feature_size) 
     y_true = np.ones_like(model.do_forward(x))
 
     # analytic grads
@@ -45,6 +46,8 @@ def gradient_check(model):
             assert np.allclose(num_grad, anal_grad, rtol=1e-4), \
                 "-- Mismatch numerical: %f, analytical: % --f"%(num_grad, anal_grad)
 
+            print("check", np.allclose(num_grad, anal_grad, rtol=1e-4))
+
         print("PASSED")
 
     print("\nAll parameter gradient checks completed")
@@ -53,13 +56,20 @@ def gradient_check(model):
 if __name__ == '__main__':
 
     # create objects 
-    l1 = Dense(n_in=3, n_out=4, name="dense_1")
+    # l1 = Dense(n_in=3, n_out=4, name="dense_1")
+    # loss = MSE("mse_loss")
+
+    # model = Model(name="grad_check_model", loss_layer=loss) 
+    # model.add(l1)
+    # model.feature_size = 3 
+
+    # gradient_check(model)
+
+    l1 = RNN(n_in=3, n_out=2, n_hidden=5, LENGTH=4, name="rnn")
     loss = MSE("mse_loss")
-
-    model = Model(name="grad_check_model", loss_layer=loss) 
+    model = Model(name="gradient_check", loss_layer=loss)
     model.add(l1)
-    model.feature_size = 3 
-
+    model.feature_size = 3
     gradient_check(model)
 
     
