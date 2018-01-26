@@ -46,10 +46,10 @@ learning-to-transduce/
 ```
 
 ## Basic usage
-Lets walk through a simple example and build a multi-layer perceptron using a sequential model API.
+Lets walk through a simple example and build a multi-layer perceptron using our sequential model API.
 
 1) Begin by importing libraries to load, pre-process datasets and visualise results.
-```
+```python
 import numpy as np 
 import matplotlib.pyplot as plt 
 from sklearn.datasets import load_digits 
@@ -58,14 +58,14 @@ from sklearn.utils import shuffle
 ```
 
 2) Import the required layer objects and the model object from `ltt`. 
-```
+```python
 from ltt.models import Model 
 from ltt.layers import Dense, Tanh, Sigmoid, ReLU, MSE
 from ltt.optimizers import SGD
 ```
 
 3) Load and pre-process the mnist data as dense numpy array. Our framework does not support sparse objects.
-```
+```python
     data, target = load_digits(return_X_y=True)
     data, target = shuffle(data, target)
     target = target.reshape(len(target), 1)
@@ -76,7 +76,7 @@ from ltt.optimizers import SGD
 ```
 
 4. Let's create a model. Here's the constructor for a `Model` object. 
-```
+```python
 class Model(object):
     """
     A simple sequential model.
@@ -98,7 +98,7 @@ class Model(object):
         self.layers = {}
 ```
 A new model object expects a loss layer and an optimizer and with them create a model.
-```
+```python
 loss = MSE("mse_loss")
 sgd_optimizer = SGD(alpha=0.1)
 model = Model(name="mnist_test", 
@@ -107,7 +107,7 @@ model = Model(name="mnist_test",
 ```
 
 5. The architecture we'll follow is `INPUT[64] -> HIDDEN1[32] -> SIGMOID -> HIDDEN[10] -> SIGMOID -> LOSS.` Let's create and add the required layer objects. 
-```
+```python
 model.add(Dense(n_in=64, n_out=32, name="dense1"))
 model.add(Sigmoid(name="act1"))
 model.add(Dense(n_in=32, n_out=10, name="dense2"))
@@ -116,7 +116,7 @@ model.add(Sigmoid(name="act2"))
 The `.add` method of `model` will take a `Layer` object append it sequentially for execution.
 
 6. Start training with data.
-```
+```python
 for epoch in range(500):
     print("Epoch: {}".format(epoch))
     epoch_loss = [] 
@@ -138,7 +138,7 @@ for epoch in range(500):
     print("Loss: {}".format(sum(epoch_loss)/len(epoch_loss)))
 ```
 7. Get predictions and accuracy
-```
+```python
 data_test, target_test = data[:200], target[:200] 
 y_preds = model.do_forward(data_test) 
 target_test = np.argmax(target_test, axis=1)
@@ -149,7 +149,7 @@ print((y_preds==target_test).mean())
 ## How it works
 
 Every layer object is required to have defined the following methods.
-```
+```python
 class AbstractLayer(object):
     """Abstract class for layers."""
 
@@ -184,7 +184,7 @@ class AbstractLayer(object):
         return
 ```
 After declaring a model, `model.do_forward(x)` runs a forward pass with `x` as input. Since this is a sequential model, it will call the `.forward(x)` method for every layer in the order of addition. Here's the code for `model.do_forward(x)`
-```
+```python
 def do_forward(self, x):
     self.batch_size = x.shape[0] * 1.0
 
@@ -201,7 +201,7 @@ def do_forward(self, x):
 ```
 
 You are then required to explicitly calculate the loss since `model.do_forward(x)` will only update the model with the output of the final layer BEFORE the `loss_layer`. With the loss calculated, you can run `model.do_backward()` to start the backward pass. Again, the model will call every layer's `.backward(current_error)` in reverse order. Concretely
-```
+```python
 def do_backward(self):
     del_error = self.loss_grad
     for ix, lname in list(enumerate(self.sequence))[::-1]:
@@ -210,7 +210,7 @@ def do_backward(self):
     return
 ```
 This will update the gradient placeholders for every layer. To update the weights using an optimizer, call `model.do_update()`. Internally, that method will call `model.optimizer.update()`. The `SGD` optimizer then updates the model weights using the `layer.set_weights(args)` as follows
-```
+```python
 class SGD(object):
     """
     Stochastic Gradient Descent optimiser.
