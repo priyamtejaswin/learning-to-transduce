@@ -18,9 +18,11 @@ class NeuralStack(BaseMemory):
         s_prev = deepcopy(strength_prev)
         s_new = np.hstack((s_prev, [[d]]))
 
-        for i in range(self.timestep+1):
+        TIME = s_new.shape[1]
+
+        for i in range(1, TIME-1):
             s_new[0, i] = np.maximum(0,
-                s_prev[0, i] - np.maximum(0, u - np.sum(s_prev[0, i+1:self.timestep]))
+                s_prev[0, i] - np.maximum(0, u - np.sum(s_prev[0, i+1:TIME-1]))
             )
 
         return s_new
@@ -30,11 +32,13 @@ class NeuralStack(BaseMemory):
             raise AttributeError("timestep is still -1. Something went wrong.")
 
         rvals = [] ## should be a list of tuples
-        for i in range(self.timestep+1):
+        TIME = strength_t.shape[1]
+
+        for i in range(TIME):
             rvals.append(
                 (np.minimum(
                     strength_t[0, i],
-                    np.maximum(0, 1.0 - np.sum(strength_t[0, i+1:self.timestep+1]))
+                    np.maximum(0, 1.0 - np.sum(strength_t[0, i+1:TIME]))
                     ) , values_t[i]))
 
         assert isinstance(rvals[0], tuple)
@@ -64,13 +68,12 @@ class NeuralStack(BaseMemory):
         assert len(values_prev.shape) == 2
         assert len(strength_prev.shape) == 2
         assert values_prev.shape[1] == vt.shape[1]
-        assert strength_prev.shape[1] == values_prev.shape[1]
+        assert strength_prev.shape[1] == values_prev.shape[0]
 
-        values_t = np.vstack((vt, values_prev))
+        values_t = np.vstack((values_prev, vt))
 
         strength_t = self.update_s(strength_prev, dt, ut)
 
-        import ipdb; ipdb.set_trace()
         r_t = self.update_r(values_t, strength_t)
 
         return (values_t, strength_t), r_t
@@ -127,17 +130,36 @@ class NeuralStack(BaseMemory):
 
 
 def stack_test():
+    """
+    The stack will not store anything.
+
+    The stack will accept two inputs:
+    1. previous_state: (values_prev, strength_prev)
+    2. input_state: (dt, ut, vt)
+
+    The stack will return two outputs:
+    1. next_state: (values_t, strength_t)
+    2. output: r_t
+    """
+
     import numpy as np
     ns = NeuralStack(name="MyStack")
     print ns.name
 
+    v_next, s_next = np.array([[0.0]]), np.array([[0.0]])
     import ipdb; ipdb.set_trace()
 
-    v_init, s_init = np.array([[0.0]]), np.array([[0.0]])
+    (v_next, s_next), r_t = ns.forward( (v_next, s_next), ( 0.8, 0.0, np.array([[1]]) ) )
+    print v_next, "\n", s_next, r_t
+    import ipdb; ipdb.set_trace()
 
-    ns.forward( (v_init, s_init), ( 1, 0, np.array([[4]]) ) )
-    ns.forward(np.array([[8]]), 0, 1)
-    ns.forward(np.array([[2]]), 0, 1)
+    (v_next, s_next), r_t = ns.forward( (v_next, s_next), ( 0.5, 0.1, np.array([[2]]) ) )
+    print v_next, "\n", s_next, r_t
+    import ipdb; ipdb.set_trace()
+
+    (v_next, s_next), r_t = ns.forward( (v_next, s_next), ( 0.9, 0.9, np.array([[3]]) ) )
+    print v_next, "\n", s_next, r_t
+    import ipdb; ipdb.set_trace()
 
     # print "r_val", ns.r_val
     #
