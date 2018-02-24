@@ -5,46 +5,27 @@ from copy import deepcopy
 import numpy as np
 
 class NeuralStack(BaseMemory):
-    """A neural stack implementation"""
+    """A neural stack implementation. It should only accept and return the updated states."""
 
-    def __init__(self,
-            embedding_size = 17,
-            max_time = 5,
-            name="nstack"
-        ):
+    def __init__(self, name="nstack"):
         self.name = name
-        self.max_time = max_time
-        self.embedding_size = embedding_size
+        self.timestep = -1
 
-        self.v_mat = array_init((self.max_time, self.embedding_size), vtype="zeros")
-        self.s_vec = array_init(max_time, vtype="zeros")
-        self.timestep = -1 ## stack is empty
-
-    def print_stack(self):
-        if self.timestep == -1:
-            raise AttributeError("timestep is still -1. Something went wrong.")
-        print "\nStack at timestep %d"%self.timestep
-        for ix, (v,s) in enumerate(zip(self.v_mat, self.s_vec[0])):
-            print ix, (v, s)
-        return
-
-    def update_s(self, u, d):
+    def update_s(self, strength_prev, d, u):
         if self.timestep == -1:
             raise AttributeError("timestep is still -1. Something went wrong.")
 
-        s_prev = deepcopy(self.s_vec)
+        s_prev = deepcopy(strength_prev)
+        s_new = np.hstack((s_prev, [[d]]))
 
-        for i in range(self.timestep, -1, -1):
-            if i == self.timestep:
-                self.s_vec[0, i] = d ## [0, i] because s_vec is a row vector shape(1, max_time)
-            else:
-                self.s_vec[0, i] = np.maximum(0,
-                    s_prev[0, i] - np.maximum(0, u - np.sum(s_prev[0, i+1:self.timestep]))
-                )
-        self.s_prev = s_prev
-        return
+        for i in range(self.timestep+1):
+            s_new[0, i] = np.maximum(0,
+                s_prev[0, i] - np.maximum(0, u - np.sum(s_prev[0, i+1:self.timestep]))
+            )
 
-    def update_r(self):
+        return s_new
+
+    def update_r(self, values_t, strength_t):
         if self.timestep == -1:
             raise AttributeError("timestep is still -1. Something went wrong.")
 
@@ -52,31 +33,48 @@ class NeuralStack(BaseMemory):
         for i in range(self.timestep+1):
             rvals.append(
                 (np.minimum(
-                    self.s_vec[0, i],
-                    np.maximum(0, 1.0 - np.sum(self.s_vec[0, i+1:self.timestep+1]))
-                    ) , self.v_mat[i]))
+                    strength_t[0, i],
+                    np.maximum(0, 1.0 - np.sum(strength_t[0, i+1:self.timestep+1]))
+                    ) , values_t[i]))
 
         assert isinstance(rvals[0], tuple)
         assert len(rvals[0]) == 2
 
-        self.r_val = np.sum(map(lambda t: t[0] * t[1], rvals), keepdims=True)
+        r_t = np.sum(map(lambda t: t[0] * t[1], rvals), keepdims=True)
+        return r_t
 
-    def forward(self, v, u, d):
+    def forward(self, previous_state, input_state):
         """
-        The stack is represented by (v_mat, s_vec).
-        The stack is expected to return its update state(v_mat`, s_vec`) EVERY TIME.
+        The stack will not store anything.
+
+        The stack will accept two inputs:
+        1. previous_state: (values_prev, strength_prev)
+        2. input_state: (dt, ut, vt)
+
+        The stack will return two outputs:
+        1. next_state: (values_t, strength_t)
+        2. output: r_t
         """
-        self.ut = u
-
-        assert v.shape == (1, self.embedding_size), "v vector shape and embedding_size do not match"
-        if self.timestep >= (self.max_time-1):
-            raise AttributeError("Stack timestep has reached max_time: %d"%self.max_time)
-
         self.timestep += 1
 
-        self.v_mat[self.timestep] = v
-        self.update_s(u, d)
-        self.update_r()
+        values_prev, strength_prev = previous_state
+        dt, ut, vt = input_state
+
+        assert len(vt.shape) == 2
+        assert len(values_prev.shape) == 2
+        assert len(strength_prev.shape) == 2
+        assert values_prev.shape[1] == vt.shape[1]
+        assert strength_prev.shape[1] == values_prev.shape[1]
+
+        values_t = np.vstack((vt, values_prev))
+
+        strength_t = self.update_s(strength_prev, dt, ut)
+
+        import ipdb; ipdb.set_trace()
+        r_t = self.update_r(values_t, strength_t)
+
+        return (values_t, strength_t), r_t
+
 
     def backward(self, true_rt):
         """
@@ -130,47 +128,50 @@ class NeuralStack(BaseMemory):
 
 def stack_test():
     import numpy as np
-    ns = NeuralStack(embedding_size=1, max_time=600)
+    ns = NeuralStack(name="MyStack")
     print ns.name
 
-    ns.forward(np.array([[4]]), 0, 1)
+    import ipdb; ipdb.set_trace()
+
+    v_init, s_init = np.array([[0.0]]), np.array([[0.0]])
+
+    ns.forward( (v_init, s_init), ( 1, 0, np.array([[4]]) ) )
     ns.forward(np.array([[8]]), 0, 1)
     ns.forward(np.array([[2]]), 0, 1)
 
-    ns.print_stack()
-    print "r_val", ns.r_val
-
-    u, d = 0.17, 0.39
-
-    for ix in range(50):
-        print "\n\t\tTraining iter:%d"%ix
-
-        ns.forward(np.array([[0.137]]), u, d) ## rt should be 2
-        print ns.r_val
-        du, dt = ns.backward(2)
-
-        u -= 0.5 * du
-        d -= 0.5 * dt
-
-        ns.forward(np.array([[0.567]]), u, d) ## rt should be 8
-        print ns.r_val
-        du, dt = ns.backward(2)
-
-        u -= 0.5 * du
-        d -= 0.5 * dt
-
-        ns.forward(np.array([[0.111]]), u, d) ## rt should be 4
-        print ns.r_val
-        du, dt = ns.backward(2)
-
-        u -= 0.5 * du
-        d -= 0.5 * dt
-
-        print du, dt
-
-    ## ns.forward(np.array([[99]]), 0.9, 0.9) should raise AttributeError
-    import ipdb; ipdb.set_trace()
-    print "PASSED"
+    # print "r_val", ns.r_val
+    #
+    # u, d = 0.17, 0.39
+    #
+    # for ix in range(50):
+    #     print "\n\t\tTraining iter:%d"%ix
+    #
+    #     ns.forward(np.array([[0.137]]), u, d) ## rt should be 2
+    #     print ns.r_val
+    #     du, dt = ns.backward(2)
+    #
+    #     u -= 0.5 * du
+    #     d -= 0.5 * dt
+    #
+    #     ns.forward(np.array([[0.567]]), u, d) ## rt should be 8
+    #     print ns.r_val
+    #     du, dt = ns.backward(2)
+    #
+    #     u -= 0.5 * du
+    #     d -= 0.5 * dt
+    #
+    #     ns.forward(np.array([[0.111]]), u, d) ## rt should be 4
+    #     print ns.r_val
+    #     du, dt = ns.backward(2)
+    #
+    #     u -= 0.5 * du
+    #     d -= 0.5 * dt
+    #
+    #     print du, dt
+    #
+    # ## ns.forward(np.array([[99]]), 0.9, 0.9) should raise AttributeError
+    # import ipdb; ipdb.set_trace()
+    # print "PASSED"
 
 if __name__ == '__main__':
     pass
