@@ -1,6 +1,7 @@
 from ..utils import array_init 
 from copy import deepcopy 
 import numpy as np 
+from ..layers import MSE
 
 class NeuralStack():
     """A neural stack implementation. It should only accept and return the updated states."""
@@ -45,8 +46,8 @@ class NeuralStack():
         # infer current time step 
         CURTIMESTEP = len(s_t)
         EMBEDDINGSIZE = V_t.shape[1]
-        print("Current timestep: ", CURTIMESTEP)
-        print("Embedding size: ", EMBEDDINGSIZE)
+        # print("Current timestep: ", CURTIMESTEP)
+        # print("Embedding size: ", EMBEDDINGSIZE)
         
         # checks and balances 
         assert len(s_t) == len(V_t)
@@ -69,6 +70,47 @@ class NeuralStack():
         assert np.shape(r_curr) == (1, EMBEDDINGSIZE) 
         
         return r_curr
+
+    def BACK_r_t(self, del_r_t, s_t, V_t):
+        """
+        inputs: 
+        del_r_t: gradient on r_t (should be same shape as r_t) 
+        s_t : to compute intermediates 
+        V_t : to compute intermediates
+
+        outputs:
+        del_V_t : gradient on V_t 
+        del_s_t : gradient on s_t 
+        """
+        del_s_t = np.zeros_like(s_t)
+        del_V_t = np.zeros_like(V_t)
+
+        def BACK_r_t_i(i):
+            c = np.sum(s_t[i+1:])
+            b = np.maximum(0, 1 - c) 
+            del_V_t[i] += del_r_t[0] * np.minimum(s_t[i], b) 
+            if s_t[i] < b:
+                del_s_t[i] += np.sum(del_r_t * V_t[i]) 
+            else:
+                # s_t[i] > b 
+                del_b = np.sum(del_r_t * V_t[i]) 
+                if (1 - c) > 0.0:
+                    del_c = -1.0 * del_b 
+                    del_s_t[i+1:] += del_c
+
+        # infer current time step 
+        CURTIMESTEP = len(s_t)
+        EMBEDDINGSIZE = V_t.shape[1]
+        # print("Current timestep: ", CURTIMESTEP)
+        # print("Embedding size: ", EMBEDDINGSIZE)
+
+        # checks and balances 
+        assert len(s_t) == len(V_t)
+        for i in range(CURTIMESTEP):
+            BACK_r_t_i(i) 
+
+        return del_V_t, del_s_t
+
 
 def test_stack_forward():
     EMBEDDINGSIZE = 3 
@@ -102,6 +144,83 @@ def test_stack_forward():
     print("Last strength vector: ", s[3])
 
     import ipdb; ipdb.set_trace()
+
+def test_r_t_grad_check():
+    EMBEDDINGSIZE = 3 
+    CURTIMESTEP = 4 
+    ns = NeuralStack() 
+    loss = MSE("mse_loss")
+
+    vts = np.eye(3)
+    
+    # forward pass 
+    V_t = np.random.randn(CURTIMESTEP, EMBEDDINGSIZE)
+    s_t = np.random.randn(CURTIMESTEP, )
+
+    # gradient checking s_t 
+    for k in range(4):
+        print("gradient check for s_t[{}]".format(k))
+
+        # numer grad 
+        delta = 1e-6 
+        # up
+        s_t[k] += delta 
+        r_t_up = ns.r_t(s_t, V_t) 
+        loss_up = loss.forward(r_t_up, np.ones((1,3)))
+        # low 
+        s_t[k] -= 2.0*delta 
+        r_t_low = ns.r_t(s_t, V_t) 
+        loss_low = loss.forward(r_t_low, np.ones((1,3)))
+        # reset 
+        s_t[k] += delta 
+        numer_grad = (loss_up - loss_low) / (2*delta) 
+
+        # analytical grad 
+        # fwd 
+        rt_preds = ns.r_t(s_t, V_t) 
+        # bwd
+        grad_rt_preds = loss.backward(rt_preds, np.ones((1,3)))
+        grad_V_t, grad_s_t = ns.BACK_r_t(grad_rt_preds, s_t, V_t) 
+
+        # check 
+        print(np.allclose(grad_s_t[k], numer_grad))
+        rel_error = np.abs(grad_s_t[k] - numer_grad) / np.maximum(np.abs(grad_s_t[k]), np.abs(numer_grad))
+        print("Relative error: {}".format(rel_error))
+
+    # gradient checking V_t 
+    it = np.nditer(V_t, flags=['multi_index'], op_flags=['readwrite'])
+    while not it.finished:
+        
+        print("Performing gradient check for V_t location: {}".format(it.multi_index))
+        
+        # numer grad 
+        delta = 1e-6 
+        # up
+        it[0] += delta 
+        r_t_up = ns.r_t(s_t, V_t) 
+        loss_up = loss.forward(r_t_up, np.ones((1,3)))
+        # low 
+        it[0] -= 2.0*delta 
+        r_t_low = ns.r_t(s_t, V_t) 
+        loss_low = loss.forward(r_t_low, np.ones((1,3)))
+        # reset 
+        it[0]  += delta 
+        numer_grad = (loss_up - loss_low) / (2*delta) 
+        
+        # analytical grad 
+        # fwd 
+        rt_preds = ns.r_t(s_t, V_t) 
+        # bwd
+        grad_rt_preds = loss.backward(rt_preds, np.ones((1,3)))
+        grad_V_t, grad_s_t = ns.BACK_r_t(grad_rt_preds, s_t, V_t) 
+        
+        # check 
+        print(np.allclose(grad_V_t[it.multi_index], numer_grad))
+        rel_error = np.abs(grad_V_t[it.multi_index] - numer_grad) / np.maximum(np.abs(grad_V_t[it.multi_index]), np.abs(numer_grad))
+        print("Relative error: {}".format(rel_error))
+
+        # move on to next 
+        it.iternext() 
 
 
 
