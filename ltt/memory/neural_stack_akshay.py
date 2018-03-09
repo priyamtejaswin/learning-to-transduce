@@ -111,6 +111,46 @@ class NeuralStack():
 
         return del_V_t, del_s_t
 
+    def BACK_s_t(self, del_s_t, s_prev, u_t, d_t):
+        """
+        inputs: 
+        del_s_t: gradient on s_t (must be same shape as s_t) 
+        s_prev: to compute intermediates 
+        u_t, d_t: to compute intermediates 
+
+        outputs:
+        del_s_prev: gradient on s_prev 
+        del_u_t, del_d_t: gradient on u_t, d_t 
+        """
+        del_s_prev = np.zeros_like(s_prev)
+        del_u_t = 0.0 
+        del_d_t = 0.0 
+        CURTIMESTEP = len(s_t)
+        
+        # checks and balances 
+        assert len(s_prev) == len(s_t) - 1 
+
+        # convenience , this function will be called in a for loop 
+        def BACK_s_t_i(i):
+            if i==CURTIMESTEP-1:
+                del_d_t += del_s_t[i] 
+            else:
+                d = np.sum(s_prev[i+1:])
+                c = u_t - d 
+                b = s_prev[i] - np.maximum(0, c) 
+                if b > 0:
+                    del_b = del_s_t[i] 
+                    del_s_prev[i] += del_b * 1.0 # del_b * db/dst-1[i]
+                    if c > 0:
+                        del_c = del_b * -1.0 # del_c = del_b * db/dc ; db/dc = -1.0 
+                        del_u_t += del_c * 1.0 # del_u_t = del_c * dc/du_t ; dc/du_t = 1.0 
+                        del_d = del_c * -1.0 # del_d = del_c * dc/dd ; dc/dd = -1.0 ; since c = u_t - d 
+                        del_s_prev[i+1:] += del_d
+        
+        # call BACK_s_t_i for each i 
+        for i in range(CURTIMESTEP):
+            BACK_s_t_i(i) 
+        return del_s_prev, del_u_t, del_d_t
 
 def test_stack_forward():
     EMBEDDINGSIZE = 3 
@@ -162,7 +202,7 @@ def test_r_t_grad_check():
         print("gradient check for s_t[{}]".format(k))
 
         # numer grad 
-        delta = 1e-6 
+        delta = 1e-5 
         # up
         s_t[k] += delta 
         r_t_up = ns.r_t(s_t, V_t) 
