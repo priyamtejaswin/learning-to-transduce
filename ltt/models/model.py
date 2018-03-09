@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 from ..layers import AbstractLayer
 import numpy as np
 
@@ -76,8 +76,8 @@ def model_test():
     model = Model(name="m1", loss_layer=l1, optimizer=sgd)
     model.add(d1)
 
-    print model.sequence
-    print model.layers
+    print(model.sequence)
+    print(model.layers)
 
     x = np.random.rand(2, 3)
     t = np.ones((2, 4))
@@ -87,4 +87,4 @@ def model_test():
     model.do_backward()
     model.do_update()
 
-    print "PASSED"
+    print("PASSED")

@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 from ..models import Model
 from ..layers import Dense, MSE
 import itertools
@@ -49,4 +49,4 @@ def sgd_test():
     sgd = SGD()
 
     sgd.update(mmodel)
-    print "PASSED"
+    print("PASSED")
