@@ -24,7 +24,7 @@ class NeuralStack():
         # infer timestep based on length of s_prev 
         CURTIMESTEP = len(s_prev) + 1  
         
-        print("Current timestep: ", CURTIMESTEP)
+        # print("Current timestep: ", CURTIMESTEP)
         
         # abstraction for convenience 
         def s_t_i(i):
@@ -125,13 +125,14 @@ class NeuralStack():
         del_s_prev = np.zeros_like(s_prev)
         del_u_t = 0.0 
         del_d_t = 0.0 
-        CURTIMESTEP = len(s_t)
+        CURTIMESTEP = len(del_s_t)
         
         # checks and balances 
-        assert len(s_prev) == len(s_t) - 1 
+        assert len(s_prev) == len(del_s_t) - 1 
 
         # convenience , this function will be called in a for loop 
         def BACK_s_t_i(i):
+            nonlocal del_u_t, del_d_t, del_s_prev
             if i==CURTIMESTEP-1:
                 del_d_t += del_s_t[i] 
             else:
@@ -224,6 +225,7 @@ def test_r_t_grad_check():
 
         # check 
         print(np.allclose(grad_s_t[k], numer_grad))
+        print(numer_grad, grad_s_t[k])
         rel_error = np.abs(grad_s_t[k] - numer_grad) / np.maximum(np.abs(grad_s_t[k]), np.abs(numer_grad))
         print("Relative error: {}".format(rel_error))
 
@@ -258,9 +260,57 @@ def test_r_t_grad_check():
         print(np.allclose(grad_V_t[it.multi_index], numer_grad))
         rel_error = np.abs(grad_V_t[it.multi_index] - numer_grad) / np.maximum(np.abs(grad_V_t[it.multi_index]), np.abs(numer_grad))
         print("Relative error: {}".format(rel_error))
+        print(grad_V_t[it.multi_index], numer_grad)
 
         # move on to next 
         it.iternext() 
+
+def test_s_t_grad_check():
+    """ Test the BACK_s_t function """ 
+
+    u_t = 0.0 
+    d_t = 0.9 
+    s_prev = np.random.rand(3,).astype(np.float64) 
+    CURTIMESTEP = 4 
+    ns = NeuralStack() 
+    loss = MSE("mse_loss")
+
+    # gradient checking s_prev 
+    it = np.nditer(s_prev, flags=["c_index"], op_flags=['readwrite'])
+    while not it.finished:
+        
+        print("Performing gradient check for s_prev location: {}".format(it.index))
+        
+        # numer grad 
+        delta = 1e-5 
+        # up
+        it[0] += delta 
+        s_t_up = ns.s_t(s_prev, u_t, d_t)
+        loss_up = loss.forward(s_t_up.reshape(-1,1), np.ones(shape=(4,1)))
+        # low 
+        it[0] -= 2.0*delta 
+        s_t_low = ns.s_t(s_prev, u_t, d_t) 
+        loss_low = loss.forward(s_t_low.reshape(-1,1), np.ones(shape=(4,1)))
+        # reset 
+        it[0]  += delta 
+        numer_grad = (loss_up - loss_low) / (2*delta) 
+        
+        # analytical grad 
+        # fwd 
+        st_preds = ns.s_t(s_prev, u_t, d_t) 
+        # bwd
+        grad_st_preds = loss.backward(st_preds.reshape(-1,1), np.ones(shape=(4,1)))
+        grad_s_prev, grad_u_t, grad_d_t = ns.BACK_s_t(grad_st_preds, s_prev, u_t, d_t) 
+
+        # check 
+        print(np.allclose(grad_s_prev[it.index], numer_grad))
+        rel_error = np.abs(grad_s_prev[it.index] - numer_grad) / np.maximum(np.abs(grad_s_prev[it.index]), np.abs(numer_grad))
+        print("Relative error: {}".format(rel_error))
+        print(grad_s_prev[it.index], numer_grad)
+
+        # move on to next 
+        it.iternext() 
+
 
 
 
