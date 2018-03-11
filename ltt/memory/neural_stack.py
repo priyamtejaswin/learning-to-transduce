@@ -1,199 +1,316 @@
-from __future__ import absolute_import
-from .base_memory import BaseMemory
-from ..utils import array_init
-from copy import deepcopy
-import numpy as np
+from ..utils import array_init 
+from copy import deepcopy 
+import numpy as np 
+from ..layers import MSE
 
-class NeuralStack(BaseMemory):
+class NeuralStack():
     """A neural stack implementation. It should only accept and return the updated states."""
-
+    
     def __init__(self, name="nstack"):
-        self.name = name
-        self.timestep = -1
+        self.name = name 
 
-    def update_s(self, strength_prev, d, u):
-        if self.timestep == -1:
-            raise AttributeError("timestep is still -1. Something went wrong.")
+    def V_t(self, V_prev, v_t):
+        
+        # checks and balances 
+        assert V_prev.shape[1] == v_t.shape[1] 
+        assert v_t.shape[0] == 1 
+        # Concatenate v_t to V_prev, this now is the V_t
+        return np.concatenate([V_prev, v_t])
 
-        s_prev = deepcopy(strength_prev)
-        s_new = np.hstack((s_prev, [[d]]))
-
-        TIME = s_new.shape[1]
-
-        for i in range(1, TIME-1):
-            s_new[0, i] = np.maximum(0,
-                s_prev[0, i] - np.maximum(0, u - np.sum(s_prev[0, i+1:TIME-1]))
-            )
-
-        return s_new
-
-    def update_r(self, values_t, strength_t):
-        if self.timestep == -1:
-            raise AttributeError("timestep is still -1. Something went wrong.")
-
-        rvals = [] ## should be a list of tuples
-        TIME = strength_t.shape[1]
-
-        for i in range(TIME):
-            rvals.append(
-                (np.minimum(
-                    strength_t[0, i],
-                    np.maximum(0, 1.0 - np.sum(strength_t[0, i+1:TIME]))
-                    ) , values_t[i]))
-
-        assert isinstance(rvals[0], tuple)
-        assert len(rvals[0]) == 2
-
-        r_t = np.sum(map(lambda t: t[0] * t[1], rvals), keepdims=True)
-        return r_t
-
-    def forward(self, previous_state, input_state):
+    def s_t(self, s_prev, u_t, d_t):
         """
-        The stack will not store anything.
-
-        The stack will accept two inputs:
-        1. previous_state: (values_prev, strength_prev)
-        2. input_state: (dt, ut, vt)
-
-        The stack will return two outputs:
-        1. next_state: (values_t, strength_t)
-        2. output: r_t
+        Generate s_t from s_prev and current push signal "dt" and pop signal "u_t". 
         """
-        self.timestep += 1
-
-        values_prev, strength_prev = previous_state
-        dt, ut, vt = input_state
-
-        assert len(vt.shape) == 2
-        assert len(values_prev.shape) == 2
-        assert len(strength_prev.shape) == 2
-        assert values_prev.shape[1] == vt.shape[1]
-        assert strength_prev.shape[1] == values_prev.shape[0]
-
-        values_t = np.vstack((values_prev, vt))
-
-        strength_t = self.update_s(strength_prev, dt, ut)
-
-        r_t = self.update_r(values_t, strength_t)
-
-        return (values_t, strength_t), r_t
-
-
-    def backward(self, true_rt):
-        """
-        The stack is represented by (v_mat, s_vec).
-        The stack expects a gradient wrt its state(v_mat, s_vec) EVERY TIME.
-        """
-        del_rt = self.r_val - true_rt
-        del_ut = 0
-
-        self.del_s_vec = np.zeros_like(self.s_vec) ## this will have dL/ds[n] = dL/dr * dr/ds[n]
-
-        for i in range(self.timestep+1):
-            if i<self.timestep:
-                self.del_s_vec[0, i] += del_rt * self.grad_rt_stn(i)
-                del_ut += self.del_s_vec[0, i] * self.grad_sti_ut(i)
-
+        # infer timestep based on length of s_prev 
+        CURTIMESTEP = len(s_prev) + 1  
+        
+        # print("Current timestep: ", CURTIMESTEP)
+        
+        # abstraction for convenience 
+        def s_t_i(i):
+            if i == CURTIMESTEP - 1:
+                return d_t 
             else:
-                del_dt = del_rt * self.grad_rt_stn(i) * self.grad_sti_dt(i)
+                return np.maximum(0, s_prev[i] - np.maximum(0, u_t - np.sum(s_prev[i+1:])))
+        
+        s_curr = [] 
+        for i in range(CURTIMESTEP):
+            s_curr.append(s_t_i(i))
+        
+        # checks and balances 
+        assert len(s_curr) == CURTIMESTEP 
+        return np.array(s_curr)
 
-        return del_ut, del_dt
 
+    def r_t(self, s_t, V_t):
+        # infer current time step 
+        CURTIMESTEP = len(s_t)
+        EMBEDDINGSIZE = V_t.shape[1]
+        # print("Current timestep: ", CURTIMESTEP)
+        # print("Embedding size: ", EMBEDDINGSIZE)
+        
+        # checks and balances 
+        assert len(s_t) == len(V_t)
+        
+        # abstraction for convenience 
+        def r_t_i(i):
+            return V_t[i] * (np.minimum(s_t[i], np.maximum(0, 1 - np.sum(s_t[i+1:]))))
+        
+        # looping
+        weighted_r = [] 
+        for i in range(CURTIMESTEP):
+            weighted_r.append(r_t_i(i))
+        weighted_r = np.array(weighted_r) 
+        
+        # checks and balances 
+        assert np.shape(weighted_r) == (CURTIMESTEP, EMBEDDINGSIZE)
+        
+        # do the weighted sum 
+        r_curr = np.sum(weighted_r, axis=0, keepdims=True)
+        assert np.shape(r_curr) == (1, EMBEDDINGSIZE) 
+        
+        return r_curr
 
-    def grad_rt_stn(self, n):
-        s = []
-        temp_strength_sum = lambda ix: np.sum(self.s_vec[0, ix+1: self.timestep+1])
+    def BACK_r_t(self, del_r_t, s_t, V_t):
+        """
+        inputs: 
+        del_r_t: gradient on r_t (should be same shape as r_t) 
+        s_t : to compute intermediates 
+        V_t : to compute intermediates
 
-        for i in range(0, self.timestep+1):
+        outputs:
+        del_V_t : gradient on V_t 
+        del_s_t : gradient on s_t 
+        """
+        del_s_t = np.zeros_like(s_t)
+        del_V_t = np.zeros_like(V_t)
 
-            if self.s_vec[0, i] <= max(0, 1 - temp_strength_sum(i)):
-                s.append(int(i==n) * self.v_mat[i])
-
-            elif ( (i<n) and (self.s_vec[0, i]>=max(0, 1 - temp_strength_sum(i))) and (temp_strength_sum(i)<=1) ):
-                s.append(-1 * self.v_mat[i])
-
+        def BACK_r_t_i(i):
+            c = np.sum(s_t[i+1:])
+            b = np.maximum(0, 1 - c) 
+            del_V_t[i] += del_r_t[0] * np.minimum(s_t[i], b) 
+            if s_t[i] < b:
+                del_s_t[i] += np.sum(del_r_t * V_t[i]) 
             else:
-                s.append(0)
+                # s_t[i] > b 
+                del_b = np.sum(del_r_t * V_t[i]) 
+                if (1 - c) > 0.0:
+                    del_c = -1.0 * del_b 
+                    del_s_t[i+1:] += del_c
 
-        return np.sum(s)
+        # infer current time step 
+        CURTIMESTEP = len(s_t)
+        EMBEDDINGSIZE = V_t.shape[1]
+        # print("Current timestep: ", CURTIMESTEP)
+        # print("Embedding size: ", EMBEDDINGSIZE)
 
-    def grad_sti_dt(self, i):
-        return int(self.timestep==i)
+        # checks and balances 
+        assert len(s_t) == len(V_t)
+        for i in range(CURTIMESTEP):
+            BACK_r_t_i(i) 
 
-    def grad_sti_ut(self, i):
-        prev_strength_sum = lambda ix: np.sum(self.s_prev[0, ix+1: self.timestep])
+        return del_V_t, del_s_t
 
-        if ( (i<self.timestep) and (self.s_vec[0, i]>0) and ((self.ut - prev_strength_sum(i)) > 0) ):
-            return -1
-        else:
-            return 0
+    def BACK_s_t(self, del_s_t, s_prev, u_t, d_t):
+        """
+        inputs: 
+        del_s_t: gradient on s_t (must be same shape as s_t) 
+        s_prev: to compute intermediates 
+        u_t, d_t: to compute intermediates 
 
+        outputs:
+        del_s_prev: gradient on s_prev 
+        del_u_t, del_d_t: gradient on u_t, d_t 
+        """
+        del_s_prev = np.zeros_like(s_prev)
+        del_u_t = 0.0 
+        del_d_t = 0.0 
+        CURTIMESTEP = len(del_s_t)
+        
+        # checks and balances 
+        assert len(s_prev) == len(del_s_t) - 1 
 
-def stack_test():
-    """
-    The stack will not store anything.
+        # convenience , this function will be called in a for loop 
+        def BACK_s_t_i(i):
+            nonlocal del_u_t, del_d_t, del_s_prev
+            if i==CURTIMESTEP-1:
+                del_d_t += del_s_t[i] 
+            else:
+                d = np.sum(s_prev[i+1:])
+                c = u_t - d 
+                b = s_prev[i] - np.maximum(0, c) 
+                if b > 0:
+                    del_b = del_s_t[i] 
+                    del_s_prev[i] += del_b * 1.0 # del_b * db/dst-1[i]
+                    if c > 0:
+                        del_c = del_b * -1.0 # del_c = del_b * db/dc ; db/dc = -1.0 
+                        del_u_t += del_c * 1.0 # del_u_t = del_c * dc/du_t ; dc/du_t = 1.0 
+                        del_d = del_c * -1.0 # del_d = del_c * dc/dd ; dc/dd = -1.0 ; since c = u_t - d 
+                        del_s_prev[i+1:] += del_d
+        
+        # call BACK_s_t_i for each i 
+        for i in range(CURTIMESTEP):
+            BACK_s_t_i(i) 
+        return del_s_prev, del_u_t, del_d_t
 
-    The stack will accept two inputs:
-    1. previous_state: (values_prev, strength_prev)
-    2. input_state: (dt, ut, vt)
+def test_stack_forward():
+    EMBEDDINGSIZE = 3 
+    V = {} 
+    s = {} 
+    r = {} 
+    V[0] = np.empty(shape=(0, EMBEDDINGSIZE))
+    s[0] = np.array([])
+    r[0] = np.array([])
+    ns = NeuralStack() 
 
-    The stack will return two outputs:
-    1. next_state: (values_t, strength_t)
-    2. output: r_t
-    """
+    vts = np.eye(3)
 
-    import numpy as np
-    ns = NeuralStack(name="MyStack")
-    print ns.name
+    # t = 1 
+    V[1] = ns.V_t( V[0], vts[0].reshape(1,-1) )
+    s[1] = ns.s_t( s[0], 0, 0.8 ) 
+    r[1] = ns.r_t( s[1], V[1] ) 
 
-    v_next, s_next = np.array([[0.0]]), np.array([[0.0]])
+    # t = 2 
+    V[2] = ns.V_t( V[1], vts[1].reshape(1,-1) )
+    s[2] = ns.s_t( s[1], 0.1, 0.5 ) 
+    r[2] = ns.r_t( s[2], V[2] ) 
+
+    # t = 3
+    V[3] = ns.V_t( V[2], vts[2].reshape(1,-1) )
+    s[3] = ns.s_t( s[2], 0.9, 0.9 ) 
+    r[3] = ns.r_t( s[3], V[3] ) 
+
+    print("Last read vector: ", r[3])
+    print("Last stack state: \n", V[3])
+    print("Last strength vector: ", s[3])
+
     import ipdb; ipdb.set_trace()
 
-    (v_next, s_next), r_t = ns.forward( (v_next, s_next), ( 0.8, 0.0, np.array([[1]]) ) )
-    print v_next, "\n", s_next, r_t
-    import ipdb; ipdb.set_trace()
+def test_r_t_grad_check():
+    EMBEDDINGSIZE = 3 
+    CURTIMESTEP = 4 
+    ns = NeuralStack() 
+    loss = MSE("mse_loss")
 
-    (v_next, s_next), r_t = ns.forward( (v_next, s_next), ( 0.5, 0.1, np.array([[2]]) ) )
-    print v_next, "\n", s_next, r_t
-    import ipdb; ipdb.set_trace()
+    vts = np.eye(3)
+    
+    # forward pass 
+    V_t = np.random.randn(CURTIMESTEP, EMBEDDINGSIZE)
+    s_t = np.random.randn(CURTIMESTEP, )
 
-    (v_next, s_next), r_t = ns.forward( (v_next, s_next), ( 0.9, 0.9, np.array([[3]]) ) )
-    print v_next, "\n", s_next, r_t
-    import ipdb; ipdb.set_trace()
+    # gradient checking s_t 
+    for k in range(4):
+        print("gradient check for s_t[{}]".format(k))
 
-    # print "r_val", ns.r_val
-    #
-    # u, d = 0.17, 0.39
-    #
-    # for ix in range(50):
-    #     print "\n\t\tTraining iter:%d"%ix
-    #
-    #     ns.forward(np.array([[0.137]]), u, d) ## rt should be 2
-    #     print ns.r_val
-    #     du, dt = ns.backward(2)
-    #
-    #     u -= 0.5 * du
-    #     d -= 0.5 * dt
-    #
-    #     ns.forward(np.array([[0.567]]), u, d) ## rt should be 8
-    #     print ns.r_val
-    #     du, dt = ns.backward(2)
-    #
-    #     u -= 0.5 * du
-    #     d -= 0.5 * dt
-    #
-    #     ns.forward(np.array([[0.111]]), u, d) ## rt should be 4
-    #     print ns.r_val
-    #     du, dt = ns.backward(2)
-    #
-    #     u -= 0.5 * du
-    #     d -= 0.5 * dt
-    #
-    #     print du, dt
-    #
-    # ## ns.forward(np.array([[99]]), 0.9, 0.9) should raise AttributeError
-    # import ipdb; ipdb.set_trace()
-    # print "PASSED"
+        # numer grad 
+        delta = 1e-5 
+        # up
+        s_t[k] += delta 
+        r_t_up = ns.r_t(s_t, V_t) 
+        loss_up = loss.forward(r_t_up, np.ones((1,3)))
+        # low 
+        s_t[k] -= 2.0*delta 
+        r_t_low = ns.r_t(s_t, V_t) 
+        loss_low = loss.forward(r_t_low, np.ones((1,3)))
+        # reset 
+        s_t[k] += delta 
+        numer_grad = (loss_up - loss_low) / (2*delta) 
 
-if __name__ == '__main__':
-    pass
+        # analytical grad 
+        # fwd 
+        rt_preds = ns.r_t(s_t, V_t) 
+        # bwd
+        grad_rt_preds = loss.backward(rt_preds, np.ones((1,3)))
+        grad_V_t, grad_s_t = ns.BACK_r_t(grad_rt_preds, s_t, V_t) 
+
+        # check 
+        print(np.allclose(grad_s_t[k], numer_grad))
+        print(numer_grad, grad_s_t[k])
+        rel_error = np.abs(grad_s_t[k] - numer_grad) / np.maximum(np.abs(grad_s_t[k]), np.abs(numer_grad))
+        print("Relative error: {}".format(rel_error))
+
+    # gradient checking V_t 
+    it = np.nditer(V_t, flags=['multi_index'], op_flags=['readwrite'])
+    while not it.finished:
+        
+        print("Performing gradient check for V_t location: {}".format(it.multi_index))
+        
+        # numer grad 
+        delta = 1e-6 
+        # up
+        it[0] += delta 
+        r_t_up = ns.r_t(s_t, V_t) 
+        loss_up = loss.forward(r_t_up, np.ones((1,3)))
+        # low 
+        it[0] -= 2.0*delta 
+        r_t_low = ns.r_t(s_t, V_t) 
+        loss_low = loss.forward(r_t_low, np.ones((1,3)))
+        # reset 
+        it[0]  += delta 
+        numer_grad = (loss_up - loss_low) / (2*delta) 
+        
+        # analytical grad 
+        # fwd 
+        rt_preds = ns.r_t(s_t, V_t) 
+        # bwd
+        grad_rt_preds = loss.backward(rt_preds, np.ones((1,3)))
+        grad_V_t, grad_s_t = ns.BACK_r_t(grad_rt_preds, s_t, V_t) 
+        
+        # check 
+        print(np.allclose(grad_V_t[it.multi_index], numer_grad))
+        rel_error = np.abs(grad_V_t[it.multi_index] - numer_grad) / np.maximum(np.abs(grad_V_t[it.multi_index]), np.abs(numer_grad))
+        print("Relative error: {}".format(rel_error))
+        print(grad_V_t[it.multi_index], numer_grad)
+
+        # move on to next 
+        it.iternext() 
+
+def test_s_t_grad_check():
+    """ Test the BACK_s_t function """ 
+
+    u_t = 0.0 
+    d_t = 0.9 
+    s_prev = np.random.rand(3,).astype(np.float64) 
+    CURTIMESTEP = 4 
+    ns = NeuralStack() 
+    loss = MSE("mse_loss")
+
+    # gradient checking s_prev 
+    it = np.nditer(s_prev, flags=["c_index"], op_flags=['readwrite'])
+    while not it.finished:
+        
+        print("Performing gradient check for s_prev location: {}".format(it.index))
+        
+        # numer grad 
+        delta = 1e-5 
+        # up
+        it[0] += delta 
+        s_t_up = ns.s_t(s_prev, u_t, d_t)
+        loss_up = loss.forward(s_t_up.reshape(-1,1), np.ones(shape=(4,1)))
+        # low 
+        it[0] -= 2.0*delta 
+        s_t_low = ns.s_t(s_prev, u_t, d_t) 
+        loss_low = loss.forward(s_t_low.reshape(-1,1), np.ones(shape=(4,1)))
+        # reset 
+        it[0]  += delta 
+        numer_grad = (loss_up - loss_low) / (2*delta) 
+        
+        # analytical grad 
+        # fwd 
+        st_preds = ns.s_t(s_prev, u_t, d_t) 
+        # bwd
+        grad_st_preds = loss.backward(st_preds.reshape(-1,1), np.ones(shape=(4,1)))
+        grad_s_prev, grad_u_t, grad_d_t = ns.BACK_s_t(grad_st_preds, s_prev, u_t, d_t) 
+
+        # check 
+        print(np.allclose(grad_s_prev[it.index], numer_grad))
+        rel_error = np.abs(grad_s_prev[it.index] - numer_grad) / np.maximum(np.abs(grad_s_prev[it.index]), np.abs(numer_grad))
+        print("Relative error: {}".format(rel_error))
+        print(grad_s_prev[it.index], numer_grad)
+
+        # move on to next 
+        it.iternext() 
+
+
+
+

@@ -1,3 +1,4 @@
+from __future__ import print_function
 import numpy as np
 
 def array_init(shape, vtype="rand", seed=1234):
@@ -25,7 +26,7 @@ def array_init(shape, vtype="rand", seed=1234):
             raise AttributeError("vtype is not ones, zeros or rand. Input:%s"%str(vtype))
 
 if __name__ == '__main__':
-    print array_init(5) # random
-    print array_init((5, 3), "ones")
-    print array_init([3, 5], "zeros")
-    print array_init([3, 3], "mmmm")
+    print(array_init(5)) # random
+    print(array_init((5, 3), "ones"))
+    print(array_init([3, 5], "zeros"))
+    print(array_init([3, 3], "mmmm"))

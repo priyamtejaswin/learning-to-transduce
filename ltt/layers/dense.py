@@ -42,9 +42,8 @@ class Dense(AbstractLayer):
     def return_weights(self):
         return (deepcopy(self.weights), deepcopy(self.bias))
 
-    def set_weights(self, (w, b)):
-        self.weights = w
-        self.bias = b
+    def set_weights(self, params):
+        self.weights, self.bias = params 
         return
 
     def return_grads(self):

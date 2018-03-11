@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 from .abstract_layer import AbstractLayer
 import numpy as np
 
@@ -42,6 +42,6 @@ def mse_test():
     y_pred = np.zeros((3, 4))
     y_true = np.random.rand(3, 4)
 
-    print mse.forward(y_pred=y_pred, y_true=y_true)
-    print mse.backward(y_pred, y_true)
-    print "PASSED"
+    print(mse.forward(y_pred=y_pred, y_true=y_true))
+    print(mse.backward(y_pred, y_true))
+    print("PASSED")
