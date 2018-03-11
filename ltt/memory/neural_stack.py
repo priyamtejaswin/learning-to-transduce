@@ -122,6 +122,8 @@ class NeuralStack():
         del_s_prev: gradient on s_prev
         del_u_t, del_d_t: gradient on u_t, d_t
         """
+        assert len(s_prev) == len(del_s_t) - 1
+
         CURTIMESTEP = len(del_s_t)
 
         del_u_t = np.zeros_like([u_t])
@@ -150,6 +152,32 @@ class NeuralStack():
             BACK_s_t_i(i)
 
         return del_s_prev, del_u_t[0], del_d_t[0]
+
+    def BACK_V_t(self, del_r_t, s_curr, d_t, V_curr):
+        CURTIMESTEP = len(s_curr)
+        assert len(V_curr.shape) == 2
+        assert V_curr.shape[0] == CURTIMESTEP
+        assert del_r_t.shape == V_curr[-1].shape
+
+        del_V_curr = np.zeros_like(V_curr)
+
+        del_V_prev = np.zeros((V_curr.shape[0]-1, V_curr.shape[1]))
+
+        def BACK_V_t_n(n):
+            if n==(CURTIMESTEP - 1):
+                del_V_curr[n] = d_t * del_r_t
+            else:
+                del_V_curr[n] += np.minimum(s_curr[n], np.maximum(0, 1 - np.sum(s_curr[n+1:]))) * del_r_t
+
+            for i in range(CURTIMESTEP-1):
+                if i == n:
+                    del_V_prev[i] += del_V_curr[n]
+
+        for n in range(CURTIMESTEP):
+            BACK_V_t_n(n)
+
+        return del_V_prev, del_V_curr[-1]
+
 
 def test_stack_forward():
     EMBEDDINGSIZE = 3
@@ -181,7 +209,6 @@ def test_stack_forward():
     print("Last read vector: ", r[3])
     print("Last stack state: \n", V[3])
     print("Last strength vector: ", s[3])
-
 
 def test_r_t_grad_check():
     EMBEDDINGSIZE = 3
@@ -271,7 +298,6 @@ def test_s_t_grad_check():
     CURTIMESTEP = 4
     ns = NeuralStack()
     loss = MSE("mse_loss")
-
     # gradient checking s_prev
     it = np.nditer(s_prev, flags=["c_index"], op_flags=['readwrite'])
     while not it.finished:
@@ -307,3 +333,34 @@ def test_s_t_grad_check():
 
         # move on to next
         it.iternext()
+
+def test_V_t_grad_check():
+    EMBEDDINGSIZE = 3
+    V = {}
+    s = {}
+    r = {}
+    V[0] = np.empty(shape=(0, EMBEDDINGSIZE))
+    s[0] = np.array([])
+    r[0] = np.array([])
+    ns = NeuralStack()
+    loss = MSE("mse_loss")
+
+    vts = np.eye(3)
+
+    # t = 1
+    V[1] = ns.V_t( V[0], vts[0].reshape(1,-1) )
+    s[1] = ns.s_t( s[0], 0, 0.8 )
+    r[1] = ns.r_t( s[1], V[1] )
+
+    # t = 2
+    V[2] = ns.V_t( V[1], vts[1].reshape(1,-1) )
+    s[2] = ns.s_t( s[1], 0.1, 0.5 )
+    r[2] = ns.r_t( s[2], V[2] )
+
+    del_r_t = loss.backward( r[2], np.ones_like(r[2]) )
+    del_V_prev, del_v_t = ns.BACK_V_t( del_r_t[0], s[2], 0.5, V[2] )
+
+    ak_del_V, ak_del_s = ns.BACK_r_t(del_r_t, s[2], V[2])
+
+    assert np.all(ak_del_V[-1] == del_v_t)
+    print "V_t_grad passed."
