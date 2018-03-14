@@ -61,7 +61,7 @@ def main():
 
         np.clip(u_ts, 0, 1, out=u_ts)
 
-        if epochs%100 == 0:
+        if epochs%500 == 0:
             print("u: ", u_ts)
             print("r: ", r)
 
