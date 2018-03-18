@@ -21,6 +21,11 @@ class RNN(AbstractLayer):
         self.aS = np.zeros((self.LENGTH+1, self.n_hidden))
         self.bS = np.zeros_like(self.aS)
 
+        self.del_Wo = np.zeros_like(self.Wo)
+        self.del_Wh = np.zeros_like(self.Wh)
+        self.del_Wi = np.zeros_like(self.Wi)
+        self.del_input = np.zeros((self.LENGTH, self.n_in))
+
         self.input = np.zeros((self.LENGTH, self.n_in))
         self.output = np.zeros((self.LENGTH, self.n_out)) # output for each item in sequence
 
@@ -106,15 +111,43 @@ class RNN(AbstractLayer):
 
         return bt, yt
 
+    def step_backward(self, current_error):
+        """
+        Single step backward pass 
+        """
+        assert current_error.shape[0] == 1 
+        assert current_error.shape[1] == self.output.shape[1] 
+
+        self.RNNTIME -= 1
+        t = self.RNNTIME 
+
+        self.del_Wo += np.dot(self.bS[t,:].reshape(-1,1), current_error)
+
+        delta_t = np.dot ( current_error, self.Wo.T )
+        delta_t = delta_t * ( 1 - (self.bS[t,:]**2) )
+        assert delta_t.shape == (1,self.n_hidden), "delta_t incorrect shape"
+
+        for i in range(t+1)[::-1]:
+            # Update del_Wh
+            self.del_Wh += np.outer(delta_t, self.bS[i-1,:]).T
+            # Update delWi
+            self.del_Wi += np.outer(delta_t, self.input[i,:]).T
+
+            # Update self.del_input
+            self.del_input[i,:] += np.dot(delta_t, self.Wi.T)[0]
+
+            # update delta
+            delta_t = np.dot(delta_t, self.Wh.T) * (1-self.bS[i-1]**2)
+        
+
+        return self.del_input[t,:].reshape(1,-1)
+
+
     def backward(self, current_error):
 
         assert current_error.shape[0] == self.output.shape[0],\
                 "current_error (dL/dy) shape does not match y shape"
 
-        self.del_Wo = np.zeros_like(self.Wo)
-        self.del_Wh = np.zeros_like(self.Wh)
-        self.del_Wi = np.zeros_like(self.Wi)
-        self.del_input = np.zeros_like(self.input)
 
         for t in range(self.LENGTH)[::-1]:
             self.del_Wo += np.dot(self.bS[t,:].reshape(-1,1), current_error[t,:].reshape(1,-1))
@@ -135,6 +168,9 @@ class RNN(AbstractLayer):
                 # update delta
                 delta_t = np.dot(delta_t, self.Wh.T) * (1-self.bS[i-1]**2)
 
+            self.RNNTIME -= 1 
+
+        assert self.RNNTIME == 0, "Backward pass did not go all the way back to timestep 0"
         return self.del_input
 
 def rnn_test():
