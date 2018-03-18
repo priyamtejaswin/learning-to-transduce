@@ -2,7 +2,7 @@ from __future__ import print_function
 import numpy as np
 from ltt.layers import Dense, ReLU, Tanh, Sigmoid, MSE
 from copy import deepcopy
-from itertools import izip, chain
+from itertools import chain
 from ltt.models import Model
 from ltt.layers import RNN
 
@@ -31,7 +31,10 @@ def gradient_check(model):
     print("\n\t\t\tdef:step_forward and def:forward outputs match. PASSED.\n")
 
     m_loss   = model.do_loss(y_true)
-    model.do_backward() #grads cached in each layer
+    _op_grad = model.loss_grad 
+    # model.do_backward() #grads cached in each layer
+    for i in range(x.shape[0])[::-1]:
+        gr = model.layers["rnn"].step_backward(_op_grad[i,:].reshape(1,-1))
 
     # gradient check
     SMALL_VAL = 1e-5
@@ -39,7 +42,7 @@ def gradient_check(model):
 
         print("layer: ", layer_name)
 
-        for wt, anal_grad in izip(layer_obj.weights_iter(), layer_obj.grads_iter()):
+        for wt, anal_grad in zip(layer_obj.weights_iter(), layer_obj.grads_iter()):
 
             # lupper
             wt[...] = wt + SMALL_VAL
