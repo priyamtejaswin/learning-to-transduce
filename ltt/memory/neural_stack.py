@@ -157,7 +157,10 @@ class NeuralStack():
         CURTIMESTEP = len(s_curr)
         assert len(V_curr.shape) == 2
         assert V_curr.shape[0] == CURTIMESTEP
-        assert del_r_t.shape == V_curr[-1].shape
+        assert del_r_t[0].shape == V_curr[-1].shape
+        assert del_r_t.shape[0] == 1
+
+        del_r_t = del_r_t[0].copy()
 
         del_V_curr = np.zeros_like(V_curr)
 
@@ -358,7 +361,8 @@ def test_V_t_grad_check():
     r[2] = ns.r_t( s[2], V[2] )
 
     del_r_t = loss.backward( r[2], np.ones_like(r[2]) )
-    del_V_prev, del_v_t = ns.BACK_V_t( del_r_t[0], s[2], 0.5, V[2] )
+    import ipdb; ipdb.set_trace()
+    del_V_prev, del_v_t = ns.BACK_V_t( del_r_t, s[2], 0.5, V[2] )
 
     ak_del_V, ak_del_s = ns.BACK_r_t(del_r_t, s[2], V[2])
 
