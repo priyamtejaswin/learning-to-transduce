@@ -17,6 +17,19 @@ def gradient_check(model):
 
     # analytic grads
     m_output = model.do_forward(x)
+
+    stepped_output = []
+    stepped_hidden = [np.zeros((1, model.layers["rnn"].n_hidden))]
+    model.layers["rnn"].RNNTIME = 0
+
+    for i in range(x.shape[0]):
+        s_h, s_o = model.layers["rnn"].step_forward(x[i][np.newaxis, :], stepped_hidden[-1])
+        stepped_hidden.append(s_h)
+        stepped_output.append(s_o)
+
+    assert np.array_equal(np.vstack(stepped_output), m_output), "step_forward and forward mismatch"
+    print("\n\t\t\tdef:step_forward and def:forward outputs match. PASSED.\n")
+
     m_loss   = model.do_loss(y_true)
     model.do_backward() #grads cached in each layer
 
@@ -50,6 +63,7 @@ def gradient_check(model):
 
         print("PASSED")
 
+    print("def:step_forward and def:forward outputs match. PASSED.\n")
     print("\nAll parameter gradient checks completed")
 
 
