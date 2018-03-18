@@ -43,19 +43,12 @@ def main():
 
         ## Forward pass
         for ts in range(1, TOTALTIMESTEPS+1):
-            V[ts] = ns.V_t(V[ts-1], sequence[ts-1].reshape(1,-1))
-            s[ts] = ns.s_t(s[ts-1], u_ts[ts], d_ts[ts]).astype(np.float64)
-            r[ts] = ns.r_t(s[ts], V[ts]).astype(np.float64)
+            V[ts], s[ts], r[ts] = ns.forward(V[ts-1], s[ts-1], d_ts[ts], u_ts[ts], sequence[ts-1].reshape(1,-1))
 
         ## Backward pass
         for ts in range(TOTALTIMESTEPS, 0, -1): # backprop error to only what you want to learn.
-            # if ts==5:
-                # u_grads[ts] = 0.0 
-                # d_grads[ts] = 0.0
-            # else:
             grad_r_t = r[ts] - expected_output[ts]
-            grad_V_t, grad_s_t = ns.BACK_r_t(grad_r_t, s[ts], V[ts])
-            grad_s_prev, grad_u_t, grad_d_t = ns.BACK_s_t(grad_s_t, s[ts-1], u_ts[ts], d_ts[ts])
+            grad_v_prev, grad_s_prev, grad_d_t, grad_u_t, grad_v_t = ns.backward(grad_r_t, s[ts-1], d_ts[ts], u_ts[ts], V[ts], s[ts])
             u_grads[ts] += grad_u_t
             d_grads[ts] += grad_d_t
 

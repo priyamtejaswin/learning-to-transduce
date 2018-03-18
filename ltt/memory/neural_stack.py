@@ -181,6 +181,23 @@ class NeuralStack():
 
         return del_V_prev, del_V_curr[-1]
 
+    def forward(self, V_prev, s_prev, d_t, u_t, v_t):
+        """
+        Wrapper over ns.V_t, ns.s_t and ns.r_t 
+        """
+        V_t = self.V_t(V_prev, v_t)
+        s_t = self.s_t(s_prev, u_t, d_t)
+        r_t = self.r_t(s_t, V_t) 
+        return V_t, s_t, r_t
+
+    def backward(self, grad_r_t, s_prev, d_t, u_t, V_t, s_t):
+        """ 
+        Wrapper over ns.BACK_r_t, ns.BACK_s_t, ns.BACK_V_t
+        """
+        grad_V_t, grad_s_t = self.BACK_r_t(grad_r_t, s_t, V_t)
+        grad_s_prev, grad_u_t, grad_d_t = self.BACK_s_t(grad_s_t, s_prev, u_t, d_t)
+        grad_V_prev, grad_v_t = self.BACK_V_t(grad_r_t, s_t, d_t, V_t)
+        return grad_V_prev, grad_s_prev, grad_d_t, grad_u_t, grad_v_t
 
 def test_stack_forward():
     EMBEDDINGSIZE = 3
