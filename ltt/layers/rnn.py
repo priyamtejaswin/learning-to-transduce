@@ -58,7 +58,7 @@ class RNN(AbstractLayer):
         curerntly input is of the shape = (num of sequences, n_in)
         eventually in batched rnn input_shape = (batch, num_of_sequences, n_in)
         """
-
+        self.RNNTIME = 0
         assert x.shape[1] == self.Wi.shape[0] , "dimensions of input are different from n_in"
         assert x.shape[0] == self.LENGTH, "LENGTH of sequence is different from the one defined"
 
@@ -83,9 +83,12 @@ class RNN(AbstractLayer):
         xin : current time input
         """
         assert len(xin.shape) == 2
+        assert len(hp.shape) == 2
         assert xin.shape[0] == 1
+        assert hp.shape[0] == 1
         assert xin.shape[1] == self.Wi.shape[0]
-        assert self.bS[-1].shape == hp.shape
+        assert hp.shape[1] == self.Wh.shape[0]
+        assert self.bS[-1].shape == hp[0].shape
 
         self.bS[self.RNNTIME-1] = hp
         at = np.dot(xin, self.Wi) + np.dot(hp, self.Wh)
@@ -101,7 +104,7 @@ class RNN(AbstractLayer):
 
         self.RNNTIME += 1
 
-        return yt
+        return bt, yt
 
     def backward(self, current_error):
 
