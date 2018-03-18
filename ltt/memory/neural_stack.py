@@ -363,4 +363,4 @@ def test_V_t_grad_check():
     ak_del_V, ak_del_s = ns.BACK_r_t(del_r_t, s[2], V[2])
 
     assert np.all(ak_del_V[-1] == del_v_t)
-    print "V_t_grad passed."
+    print("V_t_grad passed.")
