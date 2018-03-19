@@ -38,7 +38,6 @@ class NeuralStack():
             s_curr.append(s_t_i(i))
 
         # checks and balances
-        import ipdb; ipdb.set_trace()
         assert len(s_curr) == CURTIMESTEP
         return np.array(s_curr)
 
@@ -379,7 +378,6 @@ def test_V_t_grad_check():
     r[2] = ns.r_t( s[2], V[2] )
 
     del_r_t = loss.backward( r[2], np.ones_like(r[2]) )
-    import ipdb; ipdb.set_trace()
     del_V_prev, del_v_t = ns.BACK_V_t( del_r_t, s[2], 0.5, V[2] )
 
     ak_del_V, ak_del_s = ns.BACK_r_t(del_r_t, s[2], V[2])
