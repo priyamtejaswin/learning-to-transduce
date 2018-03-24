@@ -183,15 +183,15 @@ class NeuralStack():
 
     def forward(self, V_prev, s_prev, d_t, u_t, v_t):
         """
-        Wrapper over ns.V_t, ns.s_t and ns.r_t 
+        Wrapper over ns.V_t, ns.s_t and ns.r_t
         """
         V_t = self.V_t(V_prev, v_t)
         s_t = self.s_t(s_prev, u_t, d_t)
-        r_t = self.r_t(s_t, V_t) 
+        r_t = self.r_t(s_t, V_t)
         return V_t, s_t, r_t
 
     def backward(self, grad_r_t, s_prev, d_t, u_t, V_t, s_t):
-        """ 
+        """
         Wrapper over ns.BACK_r_t, ns.BACK_s_t, ns.BACK_V_t
         """
         grad_V_t, grad_s_t = self.BACK_r_t(grad_r_t, s_t, V_t)
@@ -378,7 +378,6 @@ def test_V_t_grad_check():
     r[2] = ns.r_t( s[2], V[2] )
 
     del_r_t = loss.backward( r[2], np.ones_like(r[2]) )
-    import ipdb; ipdb.set_trace()
     del_V_prev, del_v_t = ns.BACK_V_t( del_r_t, s[2], 0.5, V[2] )
 
     ak_del_V, ak_del_s = ns.BACK_r_t(del_r_t, s[2], V[2])
