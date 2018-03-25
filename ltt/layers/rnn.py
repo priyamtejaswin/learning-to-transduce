@@ -154,7 +154,27 @@ class RNN(AbstractLayer):
         assert current_error.shape[0] == 1
         assert current_error.shape[1] == self.output.shape[1]
 
-        return
+        self.RNNTIME -= 1
+        t = self.RNNTIME
+
+        self.del_Wo += np.dot(self.bS[t,:].reshape(-1,1), current_error)
+
+        delta_bS = np.dot ( current_error, self.Wo.T )
+        delta_aS = delta_bS * ( 1 - (self.bS[t,:]**2) )
+        assert delta_aS.shape == (1,self.n_hidden), "delta_aS incorrect shape"
+
+        # Update del_Wh
+        self.del_Wh += np.outer(delta_aS, self.bS[i-1,:]).T
+        # Update delWi
+        self.del_Wi += np.outer(delta_aS, self.input[i,:]).T
+
+        # Update self.del_input
+        self.del_input[i,:] += np.dot(delta_aS, self.Wi.T)[0]
+
+        # update delta_bS (FOR THE PREVIOUS STEP!!) ==> delta_bS`
+        delta_bS_prev = np.dot(delta_aS, self.Wh.T)
+
+        return delta_bS_prev, self.del_input[t,:].reshape(1,-1)
 
 
     def backward(self, current_error):
