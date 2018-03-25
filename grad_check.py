@@ -31,7 +31,7 @@ def gradient_check(model):
     print("\n\t\t\tdef:step_forward and def:forward outputs match. PASSED.\n")
 
     m_loss   = model.do_loss(y_true)
-    _op_grad = model.loss_grad 
+    _op_grad = model.loss_grad
     # model.do_backward() #grads cached in each layer
     for i in range(x.shape[0])[::-1]:
         gr = model.layers["rnn"].step_backward(_op_grad[i,:].reshape(1,-1))

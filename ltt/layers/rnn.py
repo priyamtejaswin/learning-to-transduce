@@ -113,34 +113,48 @@ class RNN(AbstractLayer):
 
     def step_backward(self, current_error):
         """
-        Single step backward pass 
+        Single step backward pass
         """
-        assert current_error.shape[0] == 1 
-        assert current_error.shape[1] == self.output.shape[1] 
+        assert current_error.shape[0] == 1
+        assert current_error.shape[1] == self.output.shape[1]
 
         self.RNNTIME -= 1
-        t = self.RNNTIME 
+        t = self.RNNTIME
 
         self.del_Wo += np.dot(self.bS[t,:].reshape(-1,1), current_error)
 
-        delta_t = np.dot ( current_error, self.Wo.T )
-        delta_t = delta_t * ( 1 - (self.bS[t,:]**2) )
-        assert delta_t.shape == (1,self.n_hidden), "delta_t incorrect shape"
+        delta_bS = np.dot ( current_error, self.Wo.T )
+        delta_aS = delta_bS * ( 1 - (self.bS[t,:]**2) )
+        assert delta_aS.shape == (1,self.n_hidden), "delta_aS incorrect shape"
 
         for i in range(t+1)[::-1]:
             # Update del_Wh
-            self.del_Wh += np.outer(delta_t, self.bS[i-1,:]).T
+            self.del_Wh += np.outer(delta_aS, self.bS[i-1,:]).T
             # Update delWi
-            self.del_Wi += np.outer(delta_t, self.input[i,:]).T
+            self.del_Wi += np.outer(delta_aS, self.input[i,:]).T
 
             # Update self.del_input
-            self.del_input[i,:] += np.dot(delta_t, self.Wi.T)[0]
+            self.del_input[i,:] += np.dot(delta_aS, self.Wi.T)[0]
 
-            # update delta
-            delta_t = np.dot(delta_t, self.Wh.T) * (1-self.bS[i-1]**2)
-        
+            # update delta (FOR THE PREVIOUS STEP!!) ==> delta_aS`
+            # i.e delta_bS` * (d_bS`/d_aS`)
+            delta_aS = np.dot(delta_aS, self.Wh.T) * (1-self.bS[i-1]**2)
 
         return self.del_input[t,:].reshape(1,-1)
+
+
+    def single_step_backward(self, current_error):
+        """
+        A backward step of the RNN that does NOT loop through all hidden states.
+        This will update the parameters only for the current timesteps.
+
+        Breaking away from the loop of `step_backward` is required for passing \
+        single update errors to the NeuralStack outputs.
+        """
+        assert current_error.shape[0] == 1
+        assert current_error.shape[1] == self.output.shape[1]
+
+        return
 
 
     def backward(self, current_error):
@@ -168,7 +182,7 @@ class RNN(AbstractLayer):
                 # update delta
                 delta_t = np.dot(delta_t, self.Wh.T) * (1-self.bS[i-1]**2)
 
-            self.RNNTIME -= 1 
+            self.RNNTIME -= 1
 
         assert self.RNNTIME == 0, "Backward pass did not go all the way back to timestep 0"
         return self.del_input
