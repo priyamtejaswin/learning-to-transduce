@@ -97,6 +97,34 @@ class Controller:
 
         return (rnn_h_curr, r_curr, (V_curr, s_curr)), o_t
 
+    def step_backward(
+        self, del_o_t, del_r_curr,
+        s_prev, d_t, u_t, V_t, s_t
+        ):
+        """
+        Expects error w.r.t. o_t for RNN.backward.
+        Expects error w.r.t. r_curr for NS.backward.
+
+        The 2nd row of inputs is for the stack.backward
+        ** o_t and r_curr are defined in self.step_forward **
+
+        For the last timestep(t==n), the error signal will only come from \
+        the output o_t since at t==n, error for r_t has not been computed.
+
+        For all other timesteps, del_r_curr will come from error w.r.t. the \
+        RNN's inputs ==> concat(i_t, r_t`)
+        """
+
+        del_O = np.zeros((1, self.rnn.n_out))
+        del_O += self.dense_ot(self.tanh_ot(del_o_t))
+
+        _, _, del_d_t, del_u_t, del_v_t = self.nstack.backward(del_r_curr, s_prev, d_t, u_t, V_t, s_t)
+
+        del_O += self.dense_dt(self.sigd_dt(del_d_t))
+        del_O += self.dense_ut(self.sigd_ut(del_u_t))
+        del_O += self.dense_vt(self.tanh_vt(del_v_t))
+
+
 #### Testing.
 import ipdb; ipdb.set_trace()
 CTRL = Controller(rnn_in=4, rnn_hid=3, rnn_out=5, LENGTH=10, EMBED_SIZE=2)
