@@ -19,7 +19,7 @@ class Dense(AbstractLayer):
         self.output = np.dot(self.input, self.weights) + self.bias
         return self.output
 
-    def backward(self, current_error):
+    def backward(self, current_error, input_cache=None):
         """
         current_error = dL_dy
         output = dL_dx
@@ -28,7 +28,11 @@ class Dense(AbstractLayer):
         assert current_error.shape == self.output.shape
         self.output_grad    = current_error
         self.input_grad     = np.dot(self.output_grad, self.weights.T)
-        self.weights_grad   = np.dot(self.input.T, self.output_grad)
+        if input_cache is not None: # For NSController
+            assert self.input.shape == input_cache.shape
+            self.weights_grad   = np.dot(input_cache, self.output_grad)
+        else:
+            self.weights_grad   = np.dot(self.input.T, self.output_grad)
         self.bias_grad      = self.output_grad.sum(axis=0, keepdims=True)
         self.check_grad_shapes() # built in self check on variables and their gradients
         return self.input_grad
