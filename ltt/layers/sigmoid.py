@@ -15,10 +15,14 @@ class Sigmoid(AbstractLayer):
         self.output = 1 / (1 + np.exp(-self.input))
         return self.output
 
-    def backward(self, current_error):
+    def backward(self, current_error, output_cache=None):
         assert current_error.shape == self.output.shape, "error and output shape do not match"
         self.output_grad = current_error
-        dy_dx = np.multiply( self.output , (1.0 - self.output))
+        if output_cache is not None: # For State aware operations
+            assert output_cache.shape == self.output.shape
+            dy_dx = np.multiply( output_cache , (1.0 - output_cache))
+        else:
+            dy_dx = np.multiply( self.output , (1.0 - self.output))
         self.input_grad  = np.multiply(self.output_grad, dy_dx)
         self.check_grad_shapes()
         return self.input_grad

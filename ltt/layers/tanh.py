@@ -15,9 +15,13 @@ class Tanh(AbstractLayer):
         self.output = np.tanh(self.input)
         return self.output
 
-    def backward(self, current_error):
+    def backward(self, current_error, output_cache=None):
         self.output_grad = current_error
-        dy_dx = 1 - np.power(self.output, 2)
+        if output_cache is not None:
+            assert self.output.shape == output_cache.shape
+            dy_dx = 1 - np.power(output_cache, 2)
+        else:
+            dy_dx = 1 - np.power(self.output, 2)
         self.input_grad = np.multiply(self.output_grad, dy_dx)
         self.check_grad_shapes()
         return self.input_grad
