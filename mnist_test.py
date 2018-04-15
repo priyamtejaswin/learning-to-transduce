@@ -32,7 +32,7 @@ def main():
 
     from grad_check import gradient_check 
     model.feature_size = 64
-    gradient_check(model)
+    # gradient_check(model)
 
     for epoch in range(500):
         print("Epoch: {}".format(epoch))

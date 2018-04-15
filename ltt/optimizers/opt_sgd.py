@@ -18,14 +18,14 @@ class SGD(object):
     def update(self, model):
         assert isinstance(model, Model)
 
-        for lname, layer in model.layers.iteritems():
+        for lname, layer in model.layers.items():
             weights = layer.return_weights()
             grads = layer.return_grads()
 
             if weights is None:
                 continue
 
-            for w, g in itertools.izip(weights, grads):
+            for w, g in zip(weights, grads):
                 assert w.shape == g.shape, "weights and grads shape do not match during update"
                 w -= g * self.alpha
 
